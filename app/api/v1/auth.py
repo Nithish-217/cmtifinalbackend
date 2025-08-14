@@ -33,8 +33,7 @@ def login(payload: LoginIn, request: Request, db: OrmSession = Depends(get_db)):
     if not user or not verify_password(payload.password, user.hashed_password):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
     
-    if user.is_first_login:
-        return FirstLoginRequiredOut()
+    # Removed is_first_login logic
 
 # Create session
     session_id = uuid.uuid4().hex
@@ -94,15 +93,27 @@ def session_check(x_session_id: str | None = None, db: OrmSession = Depends(get_
 
 @router.post("/logout", response_model=MessageOut)
 def logout(x_session_id: str | None = None, db: OrmSession = Depends(get_db)):
+    print(f"/logout called with x_session_id={x_session_id}")
     if not x_session_id:
+        print("No session_id provided to logout.")
         return MessageOut(message="Logged out")
     sess = db.execute(select(SessionModel).where(SessionModel.session_id == x_session_id)).scalar_one_or_none()
     if not sess or sess.logout_at is not None:
+        print("Session not found or already logged out.")
         return MessageOut(message="Logged out")
+    print(f"Logging out session: {sess.session_id}, role: {sess.role}")
     sess.logout_at = _now()
     sess.ended_reason = SessionEndReason.LOGOUT
-    db.commit()
+    user = db.get(User, sess.user_id)
+    if user:
+        print(f"Before logout: is_active={user.is_active} for user {user.username} (id={user.id})")
+        user.is_active = False
+        db.flush()
+        db.commit()
+        db.refresh(user)
+        print(f"After logout: is_active={user.is_active} for user {user.username} (id={user.id})")
     if sess.role in (UserRole.OFFICER, UserRole.SUPERVISOR):
+        print(f"Releasing lock for role {sess.role} and session {sess.session_id}")
         release_lock_if_owner(db, sess.role, sess)
     return MessageOut(message="Logged out")
 
@@ -111,15 +122,15 @@ def first_login_change(payload: FirstLoginChangeIn, db: OrmSession = Depends(get
     user = db.execute(select(User).where(User.username == payload.username)).scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    if not user.is_first_login:
-        raise HTTPException(status_code=403, detail="Already completed first login change")
+    # Removed is_first_login logic
     if not verify_password(payload.old_password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     if payload.new_password == settings.DEFAULT_PASSWORD:
         raise HTTPException(status_code=400, detail="New password cannot be the default password")
-        user.hashed_password = hash_password(payload.new_password)
-        user.is_first_login = False
-        db.commit()
+    user.hashed_password = hash_password(payload.new_password)
+    user.is_active = True
+    db.commit()
+    db.refresh(user)
     return MessageOut(message="Password updated, please log in")
 
 def make_reset_token(email: str) -> str:

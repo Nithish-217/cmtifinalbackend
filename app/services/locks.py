@@ -12,7 +12,7 @@ def get_active_lock(db: OrmSession, role: UserRole):
     # Only allow lock if session is valid
     if lock.session_id is not None:
         # Check if the linked session is still valid
-        s = db.get(SessionModel, lock.session_id)
+        s = db.execute(select(SessionModel).where(SessionModel.session_id == lock.session_id)).scalar_one_or_none()
         if s is None or s.expires_at <= datetime.now(timezone.utc) or s.logout_at is not None:
             # Stale lock, delete the row
             db.delete(lock)
@@ -34,7 +34,7 @@ def acquire_lock(db: OrmSession, role: UserRole, session_row: SessionModel):
         # Create lock for this session
         lock = RoleLock(
             role=role,
-            session_id=session_row.id
+            session_id=session_row.session_id
         )
         db.add(lock)
         db.commit()
@@ -42,7 +42,7 @@ def acquire_lock(db: OrmSession, role: UserRole, session_row: SessionModel):
         return lock
 
     # Acquire lock for this session
-    lock.session_id = session_row.id
+    lock.session_id = session_row.session_id
     db.commit()
     db.refresh(lock)
     return lock
@@ -51,6 +51,8 @@ def release_lock_if_owner(db: OrmSession, role: UserRole, session_row: SessionMo
     lock = db.execute(select(RoleLock).where(RoleLock.role == role)).scalar_one_or_none()
     if not lock:
         return
-    if lock.session_id == session_row.id:
+    # Compare session_id as string
+    if lock.session_id == session_row.session_id:
+        print(f"Releasing lock for role {role} and session {session_row.session_id}")
         db.delete(lock)
         db.commit()

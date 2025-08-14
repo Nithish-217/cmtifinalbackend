@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     DEFAULT_PASSWORD: str = "password"
     SECRET_KEY: str = "change-this-secret"
     PASSWORD_RESET_TOKEN_EXPIRE_MINUTES: int = 30
-    SESSION_DURATION_MINUTES: int = 60
+    SESSION_DURATION_MINUTES: int = 525600  # Effectively no time limit (1 year)
 
     # Email
     EMAIL_FROM: str = "toolcribcmti@gmail.com"
