@@ -39,6 +39,8 @@ def approve_tool_request(request_id: str, data=Depends(get_current_session), db:
         raise HTTPException(status_code=404, detail="Request not found")
     if req.status != RequestStatus.PENDING:
         raise HTTPException(status_code=400, detail="Request already processed")
+    if req.reviewer_id is not None:
+        raise HTTPException(status_code=403, detail="Already processed by another supervisor")
     inv = db.get(ToolInventory, req.tool_id)
     if not inv:
         raise HTTPException(status_code=404, detail="Tool not found")
@@ -54,8 +56,7 @@ def approve_tool_request(request_id: str, data=Depends(get_current_session), db:
     req.status = RequestStatus.APPROVED
     from datetime import datetime, timezone
     req.reviewed_at = datetime.now(timezone.utc)
-    req.approved_by = user.id
-    req.supervisor_id = user.id
+    req.reviewer_id = user.id
 
     db.commit()
 
@@ -77,9 +78,12 @@ def reject_tool_request(request_id: str, reason: str = "Not approved", db: OrmSe
         raise HTTPException(status_code=404, detail="Request not found")
     if req.status != RequestStatus.PENDING:
         raise HTTPException(status_code=400, detail="Request already processed")
+    if req.reviewer_id is not None:
+        raise HTTPException(status_code=403, detail="Already processed by another supervisor")
     from datetime import datetime, timezone
     req.status = RequestStatus.REJECTED
     req.reviewed_at = datetime.now(timezone.utc)
+    req.reviewer_id = None  # or set to supervisor id if needed
     req.reviewer_remarks = reason
     db.commit()
     return {"message": "Rejected"}
