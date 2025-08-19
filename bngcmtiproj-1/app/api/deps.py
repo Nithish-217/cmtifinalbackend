@@ -1,7 +1,6 @@
 from datetime import datetime, timezone
-from arrow import now
+import arrow
 from fastapi import Depends, Header, HTTPException, status
-from matplotlib.pyplot import arrow
 from sqlalchemy.orm import Session as OrmSession
 from sqlalchemy import select
 from app.db.session import get_db
@@ -30,10 +29,10 @@ def get_current_session(
         # release role lock if held
         if sess.role in (UserRole.OFFICER, UserRole.SUPERVISOR):
             release_lock_if_owner(db, sess.role, sess)
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Session expired")
-        user = db.get(User, sess.user_id)
-        if not user or not user.is_active:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User inactive")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Session expired")
+    user = db.get(User, sess.user_id)
+    if not user or not user.is_active:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User inactive")
     return sess, user
 
 def require_role(required: UserRole):

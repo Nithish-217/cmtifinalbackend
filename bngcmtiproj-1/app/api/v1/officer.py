@@ -88,6 +88,9 @@ def approve_tool_addition(request_id: str, data=Depends(get_current_session), db
         )
     ).scalar_one_or_none()
 
+
+
+
     if inv:
         inv.quantity_total += req.quantity
         inv.quantity_available += req.quantity
