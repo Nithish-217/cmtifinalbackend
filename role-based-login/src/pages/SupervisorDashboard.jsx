@@ -22,7 +22,7 @@ export default function SupervisorDashboard() {
             <div className="card-title">View Tool Requests</div>
           </div>
           <div className="card-desc">Approve or reject operator tool usage requests.</div>
-          <img className="card-image" alt="list" src="https://images.unsplash.com/photo-1515879218367-8466d910aaa4?q=80&w=800&auto=format&fit=crop"/>
+          {/* <img className="card-image" alt="list" src="https://images.unsplash.com/photo-1515879218367-8466d910aaa4?q=80&w=800&auto=format&fit=crop"/> */}
         </div>
         <div className="dashboard-block" onClick={() => navigate('/supervisor/tool-addition-requests')}>
           <div className="card-head">
@@ -30,7 +30,7 @@ export default function SupervisorDashboard() {
             <div className="card-title">Tool Addition Requests</div>
           </div>
           <div className="card-desc">Submit requests to add essential tools to inventory.</div>
-          <img className="card-image" alt="add" src="https://images.unsplash.com/photo-1517048676732-d65bc937f952?q=80&w=800&auto=format&fit=crop"/>
+          {/* <img className="card-image" alt="add" src="https://images.unsplash.com/photo-1517048676732-d65bc937f952?q=80&w=800&auto=format&fit=crop"/> */}
         </div>
       </div>
     </div>

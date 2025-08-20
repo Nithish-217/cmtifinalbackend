@@ -46,14 +46,19 @@ export default function SupervisorViewToolRequests() {
         },
       });
       if (res.ok) {
-        setActionMsg(`Request ${action === 'approve' ? 'approved' : 'rejected'} successfully.`);
+        const msg = `Request ${action === 'approve' ? 'approved' : 'rejected'} successfully.`;
+        setActionMsg(msg);
+        alert(msg);
         fetchRequests();
       } else {
         const data = await res.json();
-        setError(data.detail || 'Action failed.');
+        const errMsg = data.detail || 'Action failed.';
+        setError(errMsg);
+        alert(errMsg);
       }
     } catch (err) {
       setError('Action failed.');
+      alert('Action failed.');
     }
   };
 

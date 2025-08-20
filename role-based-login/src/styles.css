@@ -9,7 +9,7 @@ body {
   width: 300px;
   margin: 100px auto;
   padding: 30px;
-  background: #fff;
+  background: rgba(255, 255, 255, 0.9);
   border-radius: 10px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
   text-align: center;
@@ -56,6 +56,14 @@ button:hover {
 /* Dashboard layout */
 .dashboard {
   padding: 20px;
+}
+.page {
+  min-height: 100vh;
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
 }
 
 .top-bar {

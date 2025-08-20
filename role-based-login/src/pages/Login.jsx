@@ -50,12 +50,14 @@ export default function Login() {
   };
 
   return (
+    
     <div className="page">
+     
       <div className="top-bar">
         {/* No logout or theme toggle on login */}
       </div>
 
-      <div className="container">
+      <div className="container" style={{backdropFilter:'blur(2px)'}}>
         <h1 className="title">Tool Management</h1>
         <input
           type="text"

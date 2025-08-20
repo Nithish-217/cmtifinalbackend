@@ -100,45 +100,36 @@ def list_tool_additions(status_filter: RequestStatus | None = None, db: OrmSessi
         for r in rows
     ]
 
-@router.post("/tool-additions/{request_id}/approve", response_model=ApproveToolAdditionOut, dependencies=[Depends(require_role(UserRole.OFFICER))])
-def approve_tool_addition(request_id: str, data=Depends(get_current_session), db: OrmSession = Depends(get_db)):
-    sess, officer = data
-    req = db.execute(select(ToolAdditionRequest).where(ToolAdditionRequest.request_id == request_id)).scalar_one_or_none()
+@router.post("/tool-additions/{id}/approve", response_model=ApproveToolAdditionOut, dependencies=[Depends(require_role(UserRole.OFFICER))])
+def approve_tool_addition(id: int, data=Depends(get_current_session), db: OrmSession = Depends(get_db)):
+    _, _officer = data
+    req = db.get(ToolAdditionRequest, id)
     if not req:
         raise HTTPException(status_code=404, detail="Request not found")
     if req.status != RequestStatus.PENDING:
         raise HTTPException(status_code=400, detail="Request already processed")
 
-
+    # Persist decision in DB
     req.status = RequestStatus.APPROVED
-    req.reviewed_at = datetime.now(timezone.utc)
-    req.officer_id = officer.id
-
     db.commit()
 
     return ApproveToolAdditionOut(
-        request_id=req.request_id,
-        status=req.status.value,
+        id=req.id,
         tool_name=req.tool_name,
-        make=req.make,
-        range_mm=req.range_mm,
-        quantity=req.quantity,
-        approved_at=req.reviewed_at,
-        officer={"id": officer.id, "name": officer.full_name},
+        status=req.status.value,
     )
 
-@router.post("/tool-additions/{request_id}/reject", response_model=MessageOut, dependencies=[Depends(require_role(UserRole.OFFICER))])
-def reject_tool_addition(request_id: str, reason: str = "Not approved", data=Depends(get_current_session), db: OrmSession = Depends(get_db)):
-    _, officer = data
-    req = db.execute(select(ToolAdditionRequest).where(ToolAdditionRequest.request_id == request_id)).scalar_one_or_none()
+@router.post("/tool-additions/{id}/reject", response_model=MessageOut, dependencies=[Depends(require_role(UserRole.OFFICER))])
+def reject_tool_addition(id: int, reason: str = "Not approved", data=Depends(get_current_session), db: OrmSession = Depends(get_db)):
+    _sess, _officer = data
+    req = db.get(ToolAdditionRequest, id)
     if not req:
         raise HTTPException(status_code=404, detail="Request not found")
     if req.status != RequestStatus.PENDING:
         raise HTTPException(status_code=400, detail="Request already processed")
+
+    # Persist decision in DB
     req.status = RequestStatus.REJECTED
-    req.reviewed_at = datetime.now(timezone.utc)
-    req.reviewer_remarks = reason
-    req.officer_id = officer.id
     db.commit()
     return MessageOut(message="Rejected")
 

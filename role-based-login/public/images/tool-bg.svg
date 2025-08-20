@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+  <defs>
+    <pattern id="tile" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
+      <rect x="0" y="0" width="40" height="40" fill="#f6f8fa" />
+      <!-- subtle diagonal grid -->
+      <path d="M0 40 L40 0" stroke="#d0d7de" stroke-width="1" opacity="0.2" />
+      <path d="M-20 40 L20 0" stroke="#d0d7de" stroke-width="1" opacity="0.15" />
+      <path d="M20 40 L60 0" stroke="#d0d7de" stroke-width="1" opacity="0.15" />
+      <!-- simplified tool shapes (screwdriver/hammer hints) -->
+      <g opacity="0.25" transform="translate(8,8) rotate(30 12 12)">
+        <rect x="10" y="2" width="2" height="14" rx="1" fill="#dfe3e8" />
+        <rect x="9" y="14" width="4" height="6" rx="1" fill="#e7ebf0" />
+      </g>
+      <g opacity="0.22" transform="translate(20,20) rotate(-30 12 12)">
+        <rect x="2" y="11" width="16" height="2" rx="1" fill="#e3e8ef" />
+        <rect x="16" y="10" width="3" height="4" rx="0.8" fill="#edf2f7" />
+      </g>
+    </pattern>
+  </defs>
+  <rect width="100%" height="100%" fill="url(#tile)" />
+</svg>
+
