@@ -72,9 +72,9 @@ def approve_tool_request(request_id: str, data=Depends(get_current_session), db:
         request_id=req.request_id,
         status=req.status.value,
         tool_id=inv.id,
-        tool_name=inv.name,
+        tool_name=inv.tool_name,
         requested_qty=req.requested_qty,
-        remaining_qty=inv.quantity_available,
+        remaining_qty=inv.quantity,
         approved_at=req.reviewed_at,
         approved_by={"id": user.id, "name": user.full_name},
     )

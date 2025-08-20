@@ -1,14 +1,27 @@
 from sqlalchemy.orm import Session as OrmSession
-from sqlalchemy import select
-from app.api.deps import get_current_session
+from sqlalchemy import select, text
+from app.api.deps import get_current_session, require_role
 from app.db.session import get_db
-from fastapi import Depends
+from fastapi import Depends, HTTPException
 from fastapi import APIRouter
 
 router = APIRouter()
 
 from app.models.issue import ToolIssue
 from app.schemas.issue import ToolIssueOut
+from datetime import datetime, timezone
+from sqlalchemy import func
+from app.models.user import User
+from app.models.enums import UserRole, RequestStatus
+from app.models.session import Session as SessionModel
+from app.models.tool_requests import ToolAdditionRequest, ToolUsageRequest
+from app.models.inventory import ToolInventory
+from app.schemas.user import UserCreateIn, UserOut
+from app.schemas.inventory import ToolAdditionOut, ApproveToolAdditionOut
+from app.schemas.common import MessageOut
+from app.schemas.tool_requests import ApproveToolUsageOut
+from app.core.config import settings
+from app.core.security import hash_password
 # Officer: View all reported tool issues
 @router.get("/tool-issues", response_model=list[ToolIssueOut])
 def list_tool_issues(db: OrmSession = Depends(get_db), session_data: tuple = Depends(get_current_session)):
@@ -30,22 +43,72 @@ def list_tool_issues(db: OrmSession = Depends(get_db), session_data: tuple = Dep
             resolved_at=issue.resolved_at
         ) for issue in issues
     ]
-from datetime import datetime, timezone
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session as OrmSession
-from sqlalchemy import select, func
-from app.api.deps import require_role, get_current_session
-from app.db.session import get_db
-from app.models.user import User
-from app.models.enums import UserRole, RequestStatus
-from app.models.session import Session as SessionModel
-from app.models.tool_requests import ToolAdditionRequest
-from app.models.inventory import ToolInventory
-from app.schemas.user import UserCreateIn, UserOut
-from app.schemas.inventory import ToolAdditionOut, ApproveToolAdditionOut
-from app.schemas.common import MessageOut
-from app.core.config import settings
-from app.core.security import hash_password
+@router.get("/tool-requests", dependencies=[Depends(require_role(UserRole.OFFICER))])
+def list_pending_tool_requests_for_officer(db: OrmSession = Depends(get_db)):
+    rows = db.execute(
+        select(ToolUsageRequest, ToolInventory.tool_name.label('tool_name'))
+        .join(ToolInventory, ToolUsageRequest.tool_id == ToolInventory.id)
+        .where(ToolUsageRequest.status == RequestStatus.PENDING)
+        .order_by(ToolUsageRequest.requested_at.asc())
+    ).all()
+    return [
+        {
+            "request_id": r.ToolUsageRequest.request_id,
+            "operator_id": r.ToolUsageRequest.operator_id,
+            "tool_id": r.ToolUsageRequest.tool_id,
+            "tool_name": r.tool_name,
+            "requested_qty": r.ToolUsageRequest.requested_qty,
+            "requested_at": r.ToolUsageRequest.requested_at,
+        } for r in rows
+    ]
+
+@router.post("/tool-requests/{request_id}/approve", response_model=ApproveToolUsageOut, dependencies=[Depends(require_role(UserRole.OFFICER))])
+def officer_approve_tool_request(request_id: str, data=Depends(get_current_session), db: OrmSession = Depends(get_db)):
+    _sess, officer = data
+    req = db.execute(select(ToolUsageRequest).where(ToolUsageRequest.request_id == request_id)).scalar_one_or_none()
+    if not req:
+        raise HTTPException(status_code=404, detail="Request not found")
+    if req.status != RequestStatus.PENDING:
+        raise HTTPException(status_code=400, detail="Request already processed")
+    inv = db.get(ToolInventory, req.tool_id)
+    if not inv:
+        raise HTTPException(status_code=404, detail="Tool not found")
+
+    db.execute(text("LOCK TABLE tool_inventory IN ROW EXCLUSIVE MODE"))
+    db.refresh(inv)
+    if inv.quantity < req.requested_qty:
+        raise HTTPException(status_code=400, detail="Insufficient stock at approval time")
+
+    inv.quantity -= req.requested_qty
+    req.status = RequestStatus.APPROVED
+    from datetime import datetime, timezone
+    req.reviewed_at = datetime.now(timezone.utc)
+    req.reviewer_id = officer.id
+    db.commit()
+    return ApproveToolUsageOut(
+        request_id=req.request_id,
+        status=req.status.value,
+        tool_id=inv.id,
+        tool_name=inv.tool_name,
+        requested_qty=req.requested_qty,
+        remaining_qty=inv.quantity,
+        approved_at=req.reviewed_at,
+        approved_by={"id": officer.id, "name": officer.full_name},
+    )
+
+@router.post("/tool-requests/{request_id}/reject", dependencies=[Depends(require_role(UserRole.OFFICER))])
+def officer_reject_tool_request(request_id: str, reason: str = "Not approved", db: OrmSession = Depends(get_db)):
+    req = db.execute(select(ToolUsageRequest).where(ToolUsageRequest.request_id == request_id)).scalar_one_or_none()
+    if not req:
+        raise HTTPException(status_code=404, detail="Request not found")
+    if req.status != RequestStatus.PENDING:
+        raise HTTPException(status_code=400, detail="Request already processed")
+    from datetime import datetime, timezone
+    req.status = RequestStatus.REJECTED
+    req.reviewed_at = datetime.now(timezone.utc)
+    req.reviewer_remarks = reason
+    db.commit()
+    return {"message": "Rejected"}
 
 
 @router.post("/users", response_model=UserOut, dependencies=[Depends(require_role(UserRole.OFFICER))])

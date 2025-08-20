@@ -51,7 +51,12 @@ export default function Login() {
 
   return (
     
-    <div className="page">
+    <div className="page" style={{
+      backgroundImage: "url('/images/login-bg.jpg')",
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      backgroundRepeat: 'no-repeat'
+    }}>
      
       <div className="top-bar">
         {/* No logout or theme toggle on login */}

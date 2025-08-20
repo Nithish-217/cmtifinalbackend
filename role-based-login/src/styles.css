@@ -90,3 +90,12 @@ button:hover {
 .logout-button:hover {
   background-color: darkred;
 }
+
+/* Login specific background */
+.login-page {
+  background-image: url('./assets/login-bg.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
