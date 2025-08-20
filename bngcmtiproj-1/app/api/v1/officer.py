@@ -1,3 +1,35 @@
+from sqlalchemy.orm import Session as OrmSession
+from sqlalchemy import select
+from app.api.deps import get_current_session
+from app.db.session import get_db
+from fastapi import Depends
+from fastapi import APIRouter
+
+router = APIRouter()
+
+from app.models.issue import ToolIssue
+from app.schemas.issue import ToolIssueOut
+# Officer: View all reported tool issues
+@router.get("/tool-issues", response_model=list[ToolIssueOut])
+def list_tool_issues(db: OrmSession = Depends(get_db), session_data: tuple = Depends(get_current_session)):
+    sess, user = session_data
+    issues = db.execute(
+        select(ToolIssue)
+        .order_by(ToolIssue.created_at.desc())
+    ).scalars().all()
+    print("[DEBUG] Officer fetched tool issues:", issues)
+    # Return all required fields for each issue
+    return [
+        ToolIssueOut(
+            id=issue.id,
+            tool_id=issue.tool_id,
+            operator_id=issue.operator_id,
+            description=issue.description,
+            status=issue.status,
+            created_at=issue.created_at,
+            resolved_at=issue.resolved_at
+        ) for issue in issues
+    ]
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session as OrmSession
@@ -15,7 +47,6 @@ from app.schemas.common import MessageOut
 from app.core.config import settings
 from app.core.security import hash_password
 
-router = APIRouter()
 
 @router.post("/users", response_model=UserOut, dependencies=[Depends(require_role(UserRole.OFFICER))])
 def create_user(payload: UserCreateIn, db: OrmSession = Depends(get_db)):
@@ -57,18 +88,16 @@ def list_tool_additions(status_filter: RequestStatus | None = None, db: OrmSessi
     stmt = select(ToolAdditionRequest)
     if status_filter:
         stmt = stmt.where(ToolAdditionRequest.status == status_filter)
-        rows = db.execute(stmt.order_by(ToolAdditionRequest.requested_at.desc())).scalars().all()
+    rows = db.execute(stmt.order_by(ToolAdditionRequest.created_at.desc())).scalars().all()
     return [
-    ToolAdditionOut(
-    request_id=r.request_id,
-    tool_name=r.tool_name,
-    make=r.make,
-    range_mm=r.range_mm,
-    quantity=r.quantity,
-    location=r.location,
-    status=r.status.value,
-    requested_at=r.requested_at,
-    ) for r in rows
+        ToolAdditionOut(
+            id=r.id,
+            tool_name=r.tool_name,
+            status=r.status.value,
+            requested_by=r.requested_by,
+            created_at=r.created_at,
+        )
+        for r in rows
     ]
 
 @router.post("/tool-additions/{request_id}/approve", response_model=ApproveToolAdditionOut, dependencies=[Depends(require_role(UserRole.OFFICER))])
@@ -79,35 +108,7 @@ def approve_tool_addition(request_id: str, data=Depends(get_current_session), db
         raise HTTPException(status_code=404, detail="Request not found")
     if req.status != RequestStatus.PENDING:
         raise HTTPException(status_code=400, detail="Request already processed")
-    inv = db.execute(
-    select(ToolInventory).where(
-        (ToolInventory.name == req.tool_name) &
-        (ToolInventory.make == req.make) &
-        (ToolInventory.range_mm == req.range_mm) &
-        (ToolInventory.location == req.location)
-        )
-    ).scalar_one_or_none()
 
-
-
-
-    if inv:
-        inv.quantity_total += req.quantity
-        inv.quantity_available += req.quantity
-    else:
-        next_id = (db.execute(select(func.max(ToolInventory.id))).scalar() or 0) + 1
-        tool_code = f"T{next_id:05d}"
-        inv = ToolInventory(
-            tool_code=tool_code,
-            name=req.tool_name,
-            make=req.make,
-            range_mm=req.range_mm,
-            location=req.location,
-            quantity_total=req.quantity,
-            quantity_available=req.quantity,
-            status="ACTIVE",
-        )
-        db.add(inv)
 
     req.status = RequestStatus.APPROVED
     req.reviewed_at = datetime.now(timezone.utc)

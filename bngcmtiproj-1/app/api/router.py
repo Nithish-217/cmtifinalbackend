@@ -7,6 +7,7 @@ api_router = APIRouter()
 # Include all sub-routers
 api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
 api_router.include_router(officer.router, prefix="/officer", tags=["officer"])
+api_router.include_router(officer.router, prefix="/v1/officer", tags=["officer"])
 api_router.include_router(supervisor.router, prefix="/supervisor", tags=["supervisor"])
 api_router.include_router(operator.router, prefix="/operator", tags=["operator"])
 api_router.include_router(notifications.router, prefix="/notifications", tags=["notifications"])

@@ -14,6 +14,7 @@ import CreateUserPage from './pages/CreateUserPage';
 import DeleteUserPage from './pages/DeleteUserPage';
 import ToolAdditionRequestsPage from './pages/ToolAdditionRequestsPage';
 import IssueReportsPage from './pages/IssueReportsPage';
+import OfficerIssueReports from './pages/OfficerIssueReports';
 import OfficerNotifications from './pages/OfficerNotifications';
 
 import RequestToolPage from './pages/RequestToolPage';
@@ -38,7 +39,7 @@ export default function App() {
         <Route path="/officer/create-user" element={<CreateUserPage />} />
         <Route path="/officer/delete-user" element={<DeleteUserPage />} />
         <Route path="/officer/tool-addition-requests" element={<ToolAdditionRequestsPage />} />
-        <Route path="/officer/issue-reports" element={<IssueReportsPage />} />
+  <Route path="/officer/issue-reports" element={<OfficerIssueReports />} />
         <Route path="/officer/notifications" element={<OfficerNotifications />} />
 
         {/* Operator dashboard + subpages */}

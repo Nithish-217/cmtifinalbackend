@@ -2,7 +2,7 @@ body, html {
   margin: 0;
   padding: 0;
   font-family: Arial, sans-serif;
-  background-color: #f4f4f4;
+  background: linear-gradient(180deg, #f6f9ff 0%, #eef4ff 100%);
 }
 
 .dashboard-container {
@@ -14,13 +14,14 @@ body, html {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background-color: #333;
+  background: #0f172a;
   color: white;
-  padding: 10px 20px;
+  padding: 12px 20px;
   position: fixed;
   top: 0;
   width: 100%;
   z-index: 1000;
+  box-shadow: 0 4px 16px rgba(2,6,23,0.35);
 }
 
 .notification-icon {
@@ -41,20 +42,36 @@ body, html {
 }
 
 .logout-button {
-  background-color: #ff4d4d;
+  background: linear-gradient(90deg,#ef4444,#f59e0b);
   color: white;
   border: none;
   padding: 8px 16px;
   cursor: pointer;
-  border-radius: 5px;
-  font-weight: bold;
+  border-radius: 8px;
+  font-weight: 700;
 }
 
 h1, h2 {
   text-align: center;
-  margin-top: 80px;
-  color: #333;
+  margin-top: 96px;
+  color: #0f172a;
 }
+
+/* Hero band under topbar */
+.dashboard-hero {
+  margin: 16px auto 0;
+  max-width: 1080px;
+  padding: 18px 20px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 8px 20px rgba(2,6,23,0.08);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.hero-icon { width: 56px; height: 56px; }
+.hero-text { color:#334155; }
+.hero-text strong { color:#0f172a; }
 
 .dashboard-blocks {
   display: flex;
@@ -66,21 +83,22 @@ h1, h2 {
 
 .dashboard-block {
   background-color: white;
-  padding: 20px;
-  border: 1px solid #ccc;
-  border-radius: 10px;
+  padding: 18px;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
   cursor: pointer;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-  transition: 0.3s;
-  width: 220px;
-  text-align: center;
-  font-weight: bold;
+  box-shadow: 0 6px 14px rgba(2,6,23,0.06);
+  transition: transform .2s ease, box-shadow .2s ease;
+  width: 260px;
+  text-align: left;
 }
+.dashboard-block .card-head { display:flex; align-items:center; gap:12px; margin-bottom:10px; }
+.dashboard-block .card-icon { width: 36px; height: 36px; }
+.dashboard-block .card-title { font-weight: 800; color:#0f172a; font-size: 18px; }
+.dashboard-block .card-desc { color:#475569; font-size: 13px; margin-top: 4px; }
+.dashboard-block .card-image { width:100%; height:120px; object-fit: cover; margin-top:10px; border-radius:10px; background:#f8fafc; }
 
-.dashboard-block:hover {
-  background-color: #e6f7ff;
-  border-color: #1890ff;
-}
+.dashboard-block:hover { transform: translateY(-4px); box-shadow: 0 10px 22px rgba(2,6,23,0.12); }
 
 /* Subpage content layout */
 .subpage-content {
@@ -127,14 +145,14 @@ button:hover {
 
 
 
-.form-box input {
+.form-box input, .form-box select, .form-box textarea {
   padding: 2px 3px;
   border: 1px solid #ccc;
   border-radius: 4px;
   font-size: 14px;
 }
 
-.form-box input:focus {
+.form-box input:focus, .form-box select:focus, .form-box textarea:focus {
   outline: none;
   border-color: #007bff;
 }

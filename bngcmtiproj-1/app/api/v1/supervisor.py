@@ -57,10 +57,10 @@ def approve_tool_request(request_id: str, data=Depends(get_current_session), db:
     db.execute(text("LOCK TABLE tool_inventory IN ROW EXCLUSIVE MODE"))
     db.refresh(inv)
 
-    if inv.quantity_available < req.requested_qty:
+    if inv.quantity < req.requested_qty:
         raise HTTPException(status_code=400, detail="Insufficient stock at approval time")
 
-    inv.quantity_available -= req.requested_qty
+    inv.quantity -= req.requested_qty
     req.status = RequestStatus.APPROVED
     from datetime import datetime, timezone
     req.reviewed_at = datetime.now(timezone.utc)
@@ -98,30 +98,21 @@ def reject_tool_request(request_id: str, reason: str = "Not approved", db: OrmSe
 
 @router.post("/tool-additions", response_model=ToolAdditionOut, dependencies=[Depends(require_role(UserRole.SUPERVISOR))])
 def create_tool_addition(payload: ToolAdditionCreateIn, data=Depends(get_current_session), db: OrmSession = Depends(get_db)):
+    # Persist a minimal tool addition request matching current DB model
     sess, supervisor = data
-    next_id = (db.execute(select(func.max(ToolAdditionRequest.id))).scalar() or 0) + 1
-    rid = make_request_id("TAR", next_id)
     row = ToolAdditionRequest(
-    request_id=rid,
-    tool_name=payload.tool_name,
-    make=payload.make,
-    range_mm=payload.range_mm,
-    quantity=payload.quantity,
-    location=payload.location,
-    supervisor_id=supervisor.id,
+        tool_name=payload.tool_name,
+        requested_by=supervisor.id,
     )
     db.add(row)
     db.commit()
     db.refresh(row)
     return ToolAdditionOut(
-    request_id=row.request_id,
-    tool_name=row.tool_name,
-    make=row.make,
-    range_mm=row.range_mm,
-    quantity=row.quantity,
-    location=row.location,
-    status=row.status.value,
-    requested_at=row.requested_at,
+        id=row.id,
+        tool_name=row.tool_name,
+        status=row.status.value,
+        requested_by=row.requested_by,
+        created_at=row.created_at,
     )
 
 @router.get("/logs/approved-usage", dependencies=[Depends(require_role(UserRole.SUPERVISOR))])

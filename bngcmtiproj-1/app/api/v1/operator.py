@@ -8,11 +8,45 @@ from app.models.enums import UserRole, RequestStatus
 from app.models.inventory import ToolInventory
 from app.models.tool_requests import ToolUsageRequest
 from app.models.user import User
+from app.models.issue import ToolIssue
+from app.schemas.issue import ToolIssueCreateIn
 from app.schemas.inventory import ToolListItem
 from app.schemas.tool_requests import ToolUsageCreateIn, ToolUsageShortOut
 from app.services.notifications import notify_user
 
+# Single router for all operator endpoints
 router = APIRouter()
+
+
+# Report a tool issue (operator -> officer)
+@router.post("/tool-issues")
+def report_tool_issue(
+    payload: ToolIssueCreateIn,
+    db: OrmSession = Depends(get_db),
+    session_data: tuple = Depends(get_current_session)
+):
+    sess, user = session_data
+    issue = ToolIssue(
+        tool_id=payload.tool_id,
+        operator_id=user.id,
+        description=payload.description,
+        status="OPEN",
+    )
+    db.add(issue)
+    db.commit()
+    db.refresh(issue)
+    # Notify all officers
+    officers = db.execute(select(User.id).where(User.role == UserRole.OFFICER)).scalars().all()
+    for officer_id in officers:
+        notify_user(
+            db,
+            user_id=officer_id,
+            role="OFFICER",
+            title="Tool Issue Reported",
+            description=f"Operator {user.id} reported an issue for tool {payload.tool_id}",
+            target_url="/officer/tool-issues",
+        )
+    return {"message": "Issue reported and officers notified.", "issue_id": issue.id}
 
 # Endpoint to display all tool requests made by the operator
 @router.get("/tool-requests/all")
