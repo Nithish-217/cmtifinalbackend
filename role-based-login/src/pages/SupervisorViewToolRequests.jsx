@@ -7,18 +7,26 @@ export default function SupervisorViewToolRequests() {
   const [error, setError] = useState('');
   const [actionMsg, setActionMsg] = useState('');
 
-  const fetchRequests = () => {
+
+  // Rewritten fetch logic for supervisor tool requests
+  const fetchRequests = async () => {
     setLoading(true);
-    fetch('http://localhost:8000/api/v1/supervisor/tool-requests')
-      .then(res => res.json())
-      .then(data => {
-        setRequests(data);
-        setLoading(false);
-      })
-      .catch(() => {
-        setError('Failed to fetch requests');
-        setLoading(false);
+    setError('');
+    try {
+      const sessionId = localStorage.getItem('session_id');
+      const res = await fetch('http://localhost:8000/api/supervisor/tool-requests', {
+        headers: {
+          'x-session-id': sessionId
+        }
       });
+      if (!res.ok) throw new Error('Failed to fetch requests');
+      const data = await res.json();
+      setRequests(data);
+    } catch (err) {
+      setError('Failed to fetch requests');
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -29,9 +37,13 @@ export default function SupervisorViewToolRequests() {
     setActionMsg('');
     setError('');
     try {
-      const res = await fetch(`http://localhost:8000/api/v1/supervisor/tool-requests/${requestId}/${action}`, {
+      const sessionId = localStorage.getItem('session_id');
+      const res = await fetch(`http://localhost:8000/api/supervisor/tool-requests/${requestId}/${action}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-session-id': sessionId
+        },
       });
       if (res.ok) {
         setActionMsg(`Request ${action === 'approve' ? 'approved' : 'rejected'} successfully.`);

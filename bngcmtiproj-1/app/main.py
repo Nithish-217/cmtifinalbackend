@@ -12,7 +12,12 @@ app = FastAPI(title=settings.APP_NAME)
 
 # Ensure tables exist if running without Alembic (dev convenience)
 print("[DEBUG] Using database URL:", settings.db_url())
-Base.metadata.create_all(bind=engine)
+try:
+    Base.metadata.create_all(bind=engine)
+    print("[DEBUG] Database connection successful")
+except Exception as e:
+    print(f"[WARNING] Database connection failed: {e}")
+    print("[WARNING] Server will start but database features may not work")
 
 logging.basicConfig(level=logging.DEBUG)
 

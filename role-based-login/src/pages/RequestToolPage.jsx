@@ -36,10 +36,12 @@ export default function RequestToolPage() {
       setError('');
       if (!selectedTool) {
         setError('Please select a tool.');
+        window.alert('Please select a tool.');
         return;
       }
       if (qty <= 0) {
         setError('Quantity must be at least 1.');
+        window.alert('Quantity must be at least 1.');
         return;
       }
       try {
@@ -54,14 +56,17 @@ export default function RequestToolPage() {
         });
         if (res.ok) {
           setSuccess('Tool request submitted successfully!');
+          window.alert('Tool request submitted successfully!');
           setSelectedTool(null);
           setQty(1);
         } else {
           const data = await res.json();
           setError(data.detail || 'Failed to submit request.');
+          window.alert(data.detail || 'Failed to submit request.');
         }
       } catch (err) {
         setError('Failed to submit request.');
+        window.alert('Failed to submit request.');
       }
   };
 

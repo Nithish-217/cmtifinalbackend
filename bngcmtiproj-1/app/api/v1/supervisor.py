@@ -14,21 +14,29 @@ router = APIRouter()
 
 @router.get("/tool-requests", dependencies=[Depends(require_role(UserRole.SUPERVISOR))])
 def list_pending_tool_requests(db: OrmSession = Depends(get_db)):
+    # Join with inventory to get tool names
     rows = db.execute(
-    select(ToolUsageRequest)
-    .where(ToolUsageRequest.status == RequestStatus.PENDING)
-    .order_by(ToolUsageRequest.requested_at.asc())
-    ).scalars().all()
+        select(ToolUsageRequest, ToolInventory.tool_name.label('tool_name'))
+        .join(ToolInventory, ToolUsageRequest.tool_id == ToolInventory.id)
+        .where(ToolUsageRequest.status == RequestStatus.PENDING)
+        .order_by(ToolUsageRequest.requested_at.asc())
+    ).all()
+    
+    # Print all tool requests made by operators to the supervisor terminal
+    print("--- Operator Tool Requests ---")
+    for r in rows:
+        print(f"Request ID: {r.ToolUsageRequest.request_id}, Operator ID: {r.ToolUsageRequest.operator_id}, Tool: {r.tool_name}, Qty: {r.ToolUsageRequest.requested_qty}, Requested At: {r.ToolUsageRequest.requested_at}")
+    print("------------------------------")
+    
     return [
-    {
-    "request_id": r.request_id,
-    "operator_id": r.operator_id,
-    "operator_username": r.operator.username if r.operator else None,
-    "tool_id": r.tool_id,
-    "tool_name": r.tool.name if r.tool else None,
-    "requested_qty": r.requested_qty,
-    "requested_at": r.requested_at,
-    } for r in rows
+        {
+            "request_id": r.ToolUsageRequest.request_id,
+            "operator_id": r.ToolUsageRequest.operator_id,
+            "tool_id": r.ToolUsageRequest.tool_id,
+            "tool_name": r.tool_name,
+            "requested_qty": r.ToolUsageRequest.requested_qty,
+            "requested_at": r.ToolUsageRequest.requested_at,
+        } for r in rows
     ]
 
 @router.post("/tool-requests/{request_id}/approve", response_model=ApproveToolUsageOut, dependencies=[Depends(require_role(UserRole.SUPERVISOR))])

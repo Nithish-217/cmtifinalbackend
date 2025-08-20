@@ -32,10 +32,13 @@ def login(payload: LoginIn, request: Request, db: OrmSession = Depends(get_db)):
     user = db.execute(select(User).where(User.username == payload.username)).scalar_one_or_none()
     if not user or not verify_password(payload.password, user.hashed_password):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
-    
-    # Removed is_first_login logic
 
-# Create session
+    # Set user as active on login
+    user.is_active = True
+    db.commit()
+    db.refresh(user)
+
+    # Create session
     session_id = uuid.uuid4().hex
     expires_at = _now() + timedelta(minutes=settings.SESSION_DURATION_MINUTES)
     ip = request.client.host if request.client else None
@@ -61,12 +64,19 @@ def login(payload: LoginIn, request: Request, db: OrmSession = Depends(get_db)):
             sess.logout_at = _now()
             sess.ended_reason = SessionEndReason.EXPIRED
             db.commit()
+            # Set user inactive if session not used
+            user.is_active = False
+            db.commit()
+            db.refresh(user)
             return RoleInUseOut(role_in_use=True, locked_since=active.locked_at, message="Role currently in use by another user")
         acquired = acquire_lock(db, user.role, sess)
         if not acquired:
             sess.logout_at = _now()
             sess.ended_reason = SessionEndReason.EXPIRED
             db.commit()
+            user.is_active = False
+            db.commit()
+            db.refresh(user)
             return RoleInUseOut(role_in_use=True, locked_since=None, message="Role currently in use by another user")
 
     return LoginSuccessOut(session_id=session_id, role=user.role.value, username=user.username, expires_at=expires_at)
@@ -108,7 +118,6 @@ def logout(x_session_id: str | None = None, db: OrmSession = Depends(get_db)):
     if user:
         print(f"Before logout: is_active={user.is_active} for user {user.username} (id={user.id})")
         user.is_active = False
-        db.flush()
         db.commit()
         db.refresh(user)
         print(f"After logout: is_active={user.is_active} for user {user.username} (id={user.id})")

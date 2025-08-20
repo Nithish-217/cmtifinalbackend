@@ -1,5 +1,5 @@
-
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session as OrmSession
 from sqlalchemy import select, func
 from app.api.deps import require_role, get_current_session
@@ -14,14 +14,37 @@ from app.services.notifications import notify_user
 
 router = APIRouter()
 
-@router.get("/test")
-def test():
-    return {"status": "operator router loaded"}
+# Endpoint to display all tool requests made by the operator
+@router.get("/tool-requests/all")
+def list_operator_tool_requests(db: OrmSession = Depends(get_db), session_data: tuple = Depends(get_current_session)):
+    sess, user = session_data
+    rows = db.execute(
+        select(ToolUsageRequest)
+        .where(ToolUsageRequest.operator_id == user.id)
+        .order_by(ToolUsageRequest.requested_at.desc())
+    ).scalars().all()
+    return [
+        {
+            "request_id": r.request_id,
+            "tool_id": r.tool_id,
+            "requested_qty": r.requested_qty,
+            "status": r.status.value,
+            "requested_at": str(r.requested_at),
+            "reviewed_at": str(r.reviewed_at) if r.reviewed_at else None,
+            "reviewer_id": r.reviewer_id,
+            "reviewer_remarks": r.reviewer_remarks
+        } for r in rows
+    ]
 
-# Endpoint for operator to request a tool and notify supervisor
-@router.post("/tool-requests", response_model=ToolUsageShortOut)
-def create_tool_request(payload: ToolUsageCreateIn, db: OrmSession = Depends(get_db)):
-    sess, user = get_current_session(db)
+
+# Rewritten endpoint: POST /tool-requests
+@router.post("/tool-requests")
+def create_tool_request(
+    payload: ToolUsageCreateIn,
+    db: OrmSession = Depends(get_db),
+    session_data: tuple = Depends(get_current_session)
+):
+    sess, user = session_data
     operator_id = user.id
     inv = db.get(ToolInventory, payload.tool_id)
     if not inv:
@@ -35,6 +58,7 @@ def create_tool_request(payload: ToolUsageCreateIn, db: OrmSession = Depends(get
     row = ToolUsageRequest(
         request_id=rid,
         operator_id=operator_id,
+        user_id=user.id,
         tool_id=inv.id,
         requested_qty=payload.requested_qty,
         status=RequestStatus.PENDING,
@@ -42,7 +66,7 @@ def create_tool_request(payload: ToolUsageCreateIn, db: OrmSession = Depends(get
     db.add(row)
     db.commit()
     db.refresh(row)
-    # Notify all supervisors
+    # Notify all supervisors with target_url for dashboard
     supervisors = db.execute(
         select(User.id).where(User.role == UserRole.SUPERVISOR)
     ).scalars().all()
@@ -52,17 +76,23 @@ def create_tool_request(payload: ToolUsageCreateIn, db: OrmSession = Depends(get
             user_id=supervisor_id,
             role="SUPERVISOR",
             title="Tool Request",
-            description=f"Operator requested {payload.requested_qty} of {inv.tool_name}"
+            description=f"Operator requested {payload.requested_qty} of {inv.tool_name}",
+            target_url="/supervisor/tool-requests"
         )
-    return ToolUsageShortOut(
-        request_id=row.request_id,
-        tool_id=row.tool_id,
-        tool_name=inv.tool_name,
-        operator_id=row.operator_id,
-        requested_qty=row.requested_qty,
-        status=row.status.value,
-        requested_at=row.requested_at,
-    )
+    return JSONResponse(content={
+        "message": "Request was successful and supervisors have been notified.",
+        "request_id": row.request_id,
+        "tool_id": row.tool_id,
+        "operator_id": row.operator_id,
+        "requested_qty": row.requested_qty,
+        "status": row.status.value,
+        "requested_at": str(row.requested_at)
+    })
+
+@router.get("/test")
+def test():
+    return {"status": "operator router loaded"}
+
 
 # New /tools endpoint: returns only fields present in ToolInventory
 @router.get("/tools", response_model=list[ToolListItem])

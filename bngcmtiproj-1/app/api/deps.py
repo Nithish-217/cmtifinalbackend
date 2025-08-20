@@ -12,7 +12,7 @@ from app.services.locks import release_lock_if_owner
 
 def get_current_session(
     db: OrmSession = Depends(get_db),
-    x_session_id: str | None = Header(None)
+    x_session_id: str = Header(None)
     ) -> tuple[SessionModel, User]:
     if not x_session_id:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing session")
