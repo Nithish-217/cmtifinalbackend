@@ -6,38 +6,88 @@ from app.db.session import get_db
 from app.models.enums import UserRole, RequestStatus
 from app.models.tool_requests import ToolUsageRequest, ToolAdditionRequest
 from app.models.inventory import ToolInventory
+from app.models.notification import Notification
 from app.schemas.tool_requests import ApproveToolUsageOut
 from app.schemas.inventory import ToolAdditionCreateIn, ToolAdditionOut
 from app.services.id_generator import make_request_id
 
 router = APIRouter()
 
-@router.get("/tool-requests", dependencies=[Depends(require_role(UserRole.SUPERVISOR))])
-def list_pending_tool_requests(db: OrmSession = Depends(get_db)):
-    # Join with inventory to get tool names
-    rows = db.execute(
-        select(ToolUsageRequest, ToolInventory.tool_name.label('tool_name'))
-        .join(ToolInventory, ToolUsageRequest.tool_id == ToolInventory.id)
-        .where(ToolUsageRequest.status == RequestStatus.PENDING)
-        .order_by(ToolUsageRequest.requested_at.asc())
-    ).all()
+# New endpoint: Get supervisor notifications
+@router.get("/notifications")
+def get_supervisor_notifications(db: OrmSession = Depends(get_db), session_data: tuple = Depends(get_current_session)):
+    sess, user = session_data
+    supervisor_id = user.id
     
-    # Print all tool requests made by operators to the supervisor terminal
-    print("--- Operator Tool Requests ---")
-    for r in rows:
-        print(f"Request ID: {r.ToolUsageRequest.request_id}, Operator ID: {r.ToolUsageRequest.operator_id}, Tool: {r.tool_name}, Qty: {r.ToolUsageRequest.requested_qty}, Requested At: {r.ToolUsageRequest.requested_at}")
-    print("------------------------------")
+    # Get notifications for this supervisor
+    notifications = db.execute(
+        select(Notification)
+        .where(Notification.user_id == supervisor_id)
+        .order_by(Notification.created_at.desc())
+    ).scalars().all()
     
     return [
         {
-            "request_id": r.ToolUsageRequest.request_id,
-            "operator_id": r.ToolUsageRequest.operator_id,
-            "tool_id": r.ToolUsageRequest.tool_id,
-            "tool_name": r.tool_name,
-            "requested_qty": r.ToolUsageRequest.requested_qty,
-            "requested_at": r.ToolUsageRequest.requested_at,
-        } for r in rows
+            "id": n.id,
+            "title": n.title,
+            "description": n.description,
+            "message": n.message,
+            "target_url": n.target_url,
+            "created_at": str(n.created_at),
+            "is_read": getattr(n, 'is_read', False)
+        } for n in notifications
     ]
+
+@router.get("/tool-requests", dependencies=[Depends(require_role(UserRole.SUPERVISOR))])
+def list_all_tool_requests(db: OrmSession = Depends(get_db)):
+    print("=== Supervisor tool-requests endpoint called ===")
+    
+    try:
+        # First, let's check if there are any tool requests at all
+        all_requests = db.execute(select(ToolUsageRequest)).scalars().all()
+        print(f"Total tool requests in database: {len(all_requests)}")
+        
+        # Check if there are any tool inventory items
+        all_tools = db.execute(select(ToolInventory)).scalars().all()
+        print(f"Total tools in inventory: {len(all_tools)}")
+        
+        # Join with inventory to get tool names - show ALL requests, not just pending
+        rows = db.execute(
+            select(ToolUsageRequest, ToolInventory.tool_name.label('tool_name'))
+            .join(ToolInventory, ToolUsageRequest.tool_id == ToolInventory.id)
+            .order_by(ToolUsageRequest.requested_at.desc())  # Show newest first
+        ).all()
+        
+        print(f"Requests with tool names: {len(rows)}")
+        
+        # Print all tool requests made by operators to the supervisor terminal
+        print("--- All Operator Tool Requests ---")
+        for r in rows:
+            print(f"Request ID: {r.ToolUsageRequest.request_id}, Operator ID: {r.ToolUsageRequest.operator_id}, Tool: {r.tool_name}, Qty: {r.ToolUsageRequest.requested_qty}, Status: {r.ToolUsageRequest.status}, Requested At: {r.ToolUsageRequest.requested_at}")
+        print("----------------------------------")
+        
+        result = [
+            {
+                "request_id": r.ToolUsageRequest.request_id,
+                "operator_id": r.ToolUsageRequest.operator_id,
+                "tool_id": r.ToolUsageRequest.tool_id,
+                "tool_name": r.tool_name,
+                "requested_qty": r.ToolUsageRequest.requested_qty,
+                "requested_at": r.ToolUsageRequest.requested_at,
+                "status": r.ToolUsageRequest.status.value,  # Include status
+                "reviewed_at": r.ToolUsageRequest.reviewed_at,  # Include review time
+                "reviewer_remarks": r.ToolUsageRequest.reviewer_remarks,  # Include remarks
+            } for r in rows
+        ]
+        
+        print(f"Returning {len(result)} requests")
+        return result
+        
+    except Exception as e:
+        print(f"ERROR in supervisor tool-requests: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
 @router.post("/tool-requests/{request_id}/approve", response_model=ApproveToolUsageOut, dependencies=[Depends(require_role(UserRole.SUPERVISOR))])
 def approve_tool_request(request_id: str, data=Depends(get_current_session), db: OrmSession = Depends(get_db)):
@@ -68,6 +118,17 @@ def approve_tool_request(request_id: str, data=Depends(get_current_session), db:
 
     db.commit()
 
+    # Notify the operator about approval
+    from app.services.notifications import notify_user
+    notify_user(
+        db,
+        user_id=req.operator_id,
+        role="OPERATOR",
+        title="Tool Request Approved",
+        description=f"Your request for {inv.tool_name} has been approved by supervisor",
+        target_url="/operator-dashboard",
+    )
+
     return ApproveToolUsageOut(
         request_id=req.request_id,
         status=req.status.value,
@@ -80,7 +141,8 @@ def approve_tool_request(request_id: str, data=Depends(get_current_session), db:
     )
 
 @router.post("/tool-requests/{request_id}/reject", dependencies=[Depends(require_role(UserRole.SUPERVISOR))])
-def reject_tool_request(request_id: str, reason: str = "Not approved", db: OrmSession = Depends(get_db)):
+def reject_tool_request(request_id: str, data=Depends(get_current_session), db: OrmSession = Depends(get_db)):
+    sess, user = data
     req = db.execute(select(ToolUsageRequest).where(ToolUsageRequest.request_id == request_id)).scalar_one_or_none()
     if not req:
         raise HTTPException(status_code=404, detail="Request not found")
@@ -88,13 +150,30 @@ def reject_tool_request(request_id: str, reason: str = "Not approved", db: OrmSe
         raise HTTPException(status_code=400, detail="Request already processed")
     if req.reviewer_id is not None:
         raise HTTPException(status_code=403, detail="Already processed by another supervisor")
-    from datetime import datetime, timezone
+    
+    inv = db.get(ToolInventory, req.tool_id)
+    if not inv:
+        raise HTTPException(status_code=404, detail="Tool not found")
+
     req.status = RequestStatus.REJECTED
+    from datetime import datetime, timezone
     req.reviewed_at = datetime.now(timezone.utc)
-    req.reviewer_id = None  # or set to supervisor id if needed
-    req.reviewer_remarks = reason
+    req.reviewer_id = user.id
+
     db.commit()
-    return {"message": "Rejected"}
+
+    # Notify the operator about rejection
+    from app.services.notifications import notify_user
+    notify_user(
+        db,
+        user_id=req.operator_id,
+        role="OPERATOR",
+        title="Tool Request Rejected",
+        description=f"Your request for {inv.tool_name} has been rejected by supervisor",
+        target_url="/operator-dashboard",
+    )
+
+    return {"message": "Request rejected successfully"}
 
 @router.post("/tool-additions", response_model=ToolAdditionOut, dependencies=[Depends(require_role(UserRole.SUPERVISOR))])
 def create_tool_addition(payload: ToolAdditionCreateIn, data=Depends(get_current_session), db: OrmSession = Depends(get_db)):

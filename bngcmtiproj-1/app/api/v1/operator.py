@@ -13,10 +13,42 @@ from app.schemas.issue import ToolIssueCreateIn
 from app.schemas.inventory import ToolListItem
 from app.schemas.tool_requests import ToolUsageCreateIn, ToolUsageShortOut
 from app.services.notifications import notify_user
+from app.models.notification import Notification
 
 # Single router for all operator endpoints
 router = APIRouter()
 
+
+# Test endpoint to create a sample tool issue
+@router.post("/test-issue")
+def create_test_issue(db: OrmSession = Depends(get_db), session_data: tuple = Depends(get_current_session)):
+    sess, user = session_data
+    
+    # Create a test tool issue
+    from app.models.issue import ToolIssue
+    test_issue = ToolIssue(
+        tool_id=1,  # Assuming tool ID 1 exists
+        operator_id=user.id,
+        description="Test issue for debugging purposes",
+        status="OPEN",
+    )
+    db.add(test_issue)
+    db.commit()
+    db.refresh(test_issue)
+    
+    # Notify officers
+    officers = db.execute(select(User.id).where(User.role == UserRole.OFFICER)).scalars().all()
+    for officer_id in officers:
+        notify_user(
+            db,
+            user_id=officer_id,
+            role="OFFICER",
+            title="Test Tool Issue",
+            description=f"Test issue created by {user.full_name}",
+            target_url="/officer/issue-reports",
+        )
+    
+    return {"message": "Test issue created", "issue_id": test_issue.id}
 
 # Report a tool issue (operator -> officer)
 @router.post("/tool-issues")
@@ -26,6 +58,12 @@ def report_tool_issue(
     session_data: tuple = Depends(get_current_session)
 ):
     sess, user = session_data
+    
+    # Get tool information for better notification
+    tool = db.get(ToolInventory, payload.tool_id)
+    if not tool:
+        raise HTTPException(status_code=404, detail="Tool not found")
+    
     issue = ToolIssue(
         tool_id=payload.tool_id,
         operator_id=user.id,
@@ -35,17 +73,19 @@ def report_tool_issue(
     db.add(issue)
     db.commit()
     db.refresh(issue)
-    # Notify all officers
+    
+    # Notify all officers with specific tool information
     officers = db.execute(select(User.id).where(User.role == UserRole.OFFICER)).scalars().all()
     for officer_id in officers:
         notify_user(
             db,
             user_id=officer_id,
             role="OFFICER",
-            title="Tool Issue Reported",
-            description=f"Operator {user.id} reported an issue for tool {payload.tool_id}",
-            target_url="/officer/tool-issues",
+            title="New Tool Issue Reported",
+            description=f"Operator {user.full_name} reported an issue for tool: {tool.tool_name} (ID: {tool.id})",
+            target_url="/officer/issue-reports",
         )
+    
     return {"message": "Issue reported and officers notified.", "issue_id": issue.id}
 
 # Endpoint to display all tool requests made by the operator
@@ -68,6 +108,65 @@ def list_operator_tool_requests(db: OrmSession = Depends(get_db), session_data: 
             "reviewer_id": r.reviewer_id,
             "reviewer_remarks": r.reviewer_remarks
         } for r in rows
+    ]
+
+# New endpoint: Get operator statistics
+@router.get("/statistics")
+def get_operator_statistics(db: OrmSession = Depends(get_db), session_data: tuple = Depends(get_current_session)):
+    sess, user = session_data
+    operator_id = user.id
+    
+    # Count total tools used (approved requests)
+    total_tools_used = db.execute(
+        select(func.sum(ToolUsageRequest.requested_qty))
+        .where(
+            ToolUsageRequest.operator_id == operator_id,
+            ToolUsageRequest.status == RequestStatus.APPROVED
+        )
+    ).scalar() or 0
+    
+    # Count total tool requests made
+    total_requests = db.execute(
+        select(func.count(ToolUsageRequest.id))
+        .where(ToolUsageRequest.operator_id == operator_id)
+    ).scalar() or 0
+    
+    # Count total issues reported
+    total_issues = db.execute(
+        select(func.count(ToolIssue.id))
+        .where(ToolIssue.operator_id == operator_id)
+    ).scalar() or 0
+    
+    return {
+        "total_tools_used": total_tools_used,
+        "total_requests": total_requests,
+        "total_issues": total_issues,
+        "full_name": user.full_name
+    }
+
+# New endpoint: Get operator notifications
+@router.get("/notifications")
+def get_operator_notifications(db: OrmSession = Depends(get_db), session_data: tuple = Depends(get_current_session)):
+    sess, user = session_data
+    operator_id = user.id
+    
+    # Get notifications for this operator
+    notifications = db.execute(
+        select(Notification)
+        .where(Notification.user_id == operator_id)
+        .order_by(Notification.created_at.desc())
+    ).scalars().all()
+    
+    return [
+        {
+            "id": n.id,
+            "title": n.title,
+            "description": n.description,
+            "message": n.message,
+            "target_url": n.target_url,
+            "created_at": str(n.created_at),
+            "is_read": getattr(n, 'is_read', False)
+        } for n in notifications
     ]
 
 

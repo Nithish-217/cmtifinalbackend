@@ -1,7 +1,6 @@
-// src/pages/SupervisorRequestToolPage.jsx
+// src/pages/SupervisorToolAdditionRequests.jsx
 import React, { useState } from 'react';
-import TopBar from './TopBar';
-import './OfficerDashboard.css'; // Reuse the existing styles
+import './SupervisorToolAdditionRequests.css';
 
 export default function SupervisorRequestToolPage() {
   const [toolName, setToolName] = useState('');
@@ -26,28 +25,63 @@ export default function SupervisorRequestToolPage() {
         body: JSON.stringify({ tool_name: toolName, quantity: Number(quantity) })
       });
       if (!res.ok) throw new Error('Failed to submit tool addition request');
-      setSuccess('Tool addition request submitted');
+      setSuccess('Tool addition request submitted successfully!');
       setToolName('');
       setQuantity(1);
+      setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
       setError(err.message || 'Failed to submit');
+      setTimeout(() => setError(''), 3000);
     } finally {
       setLoading(false);
     }
   };
+
   return (
-    <div className="dashboard-container">
-      <TopBar />
-      <div className="form-wrapper">
-        <h2 style={{ textAlign: 'center', marginTop: '80px' }}>Supervisor - Tool Addition Request</h2>
-        {error && <div style={{color:'red', marginBottom:12}}>{error}</div>}
-        {success && <div style={{color:'green', marginBottom:12}}>{success}</div>}
-        <form className="form-box" onSubmit={handleSubmit}>
-          <label>Tool Name</label>
-          <input value={toolName} onChange={e=>setToolName(e.target.value)} placeholder="Enter tool name" required />
-          <label>Quantity</label>
-          <input type="number" min="1" value={quantity} onChange={e=>setQuantity(e.target.value)} required />
-          <button type="submit" disabled={loading}>{loading ? 'Submitting...' : 'Submit Request'}</button>
+    <div className="supervisor-tool-addition-container">
+      <h1>Tool Addition Request</h1>
+      
+      {error && <div className="error-message">{error}</div>}
+      {success && <div className="success-message">{success}</div>}
+      
+      <div className="form-wrapper glass">
+        <h2>Request New Tool</h2>
+        <form className="tool-form" onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label htmlFor="toolName">Tool Name</label>
+            <input
+              id="toolName"
+              type="text"
+              value={toolName}
+              onChange={e => setToolName(e.target.value)}
+              placeholder="Enter tool name"
+              required
+              className="form-input"
+            />
+          </div>
+          
+          <div className="form-group">
+            <label htmlFor="quantity">Quantity</label>
+            <input
+              id="quantity"
+              type="number"
+              min="1"
+              value={quantity}
+              onChange={e => setQuantity(e.target.value)}
+              required
+              className="form-input"
+            />
+          </div>
+          
+          <div className="form-actions">
+            <button 
+              type="submit" 
+              disabled={loading}
+              className="submit-btn"
+            >
+              {loading ? 'Submitting...' : 'Submit Request'}
+            </button>
+          </div>
         </form>
       </div>
     </div>

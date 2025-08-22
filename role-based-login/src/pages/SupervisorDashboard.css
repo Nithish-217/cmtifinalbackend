@@ -1,0 +1,109 @@
+/* SupervisorDashboard.css - Same styling as OfficerDashboard */
+.dashboard-container {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.dashboard-container h1 {
+  text-align: center;
+  color: #2d3748;
+  margin-bottom: 30px;
+  font-size: 2.5rem;
+  font-weight: 700;
+}
+
+.dashboard-hero {
+  text-align: center;
+  margin-bottom: 40px;
+  padding: 30px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 20px;
+  color: white;
+  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+}
+
+.hero-icon {
+  width: 80px;
+  height: 80px;
+  margin-bottom: 20px;
+  filter: brightness(0) invert(1);
+}
+
+.hero-text {
+  font-size: 1.2rem;
+  line-height: 1.6;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.dashboard-blocks {
+  display: grid;
+  gap: 25px;
+}
+
+.dashboard-blocks.horizontal {
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+
+.dashboard-block {
+  background: white;
+  border-radius: 20px;
+  padding: 25px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e2e8f0;
+}
+
+.dashboard-block:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+}
+
+.card-head {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.card-icon {
+  width: 48px;
+  height: 48px;
+}
+
+.card-title {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #2d3748;
+}
+
+.card-desc {
+  color: #718096;
+  line-height: 1.5;
+  font-size: 1rem;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .dashboard-container {
+    padding: 15px;
+  }
+  
+  .dashboard-container h1 {
+    font-size: 2rem;
+  }
+  
+  .dashboard-hero {
+    padding: 20px;
+  }
+  
+  .hero-text {
+    font-size: 1rem;
+  }
+  
+  .dashboard-blocks.horizontal {
+    grid-template-columns: 1fr;
+  }
+}

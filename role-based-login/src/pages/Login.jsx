@@ -1,11 +1,13 @@
 // Login.jsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useUser } from '../context/UserContext';
 
 export default function Login() {
   const [userId, setUserId] = useState('');
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
+  const { login } = useUser();
 
   const handleLogin = async () => {
     if (!userId || !password) {
@@ -25,15 +27,21 @@ export default function Login() {
         alert(data.detail || 'Login failed');
         return;
       }
-      // Store session_id in localStorage for logout
+      
+      // Store session_id and user_id in localStorage
       if (data.session_id) {
         localStorage.setItem('session_id', data.session_id);
       }
+      localStorage.setItem('user_id', userId);
+      
       if (data.role === 'OFFICER') {
+        login('OFFICER', data.session_id);
         navigate('/officer-dashboard');
       } else if (data.role === 'OPERATOR') {
+        login('OPERATOR', data.session_id);
         navigate('/operator-dashboard');
       } else if (data.role === 'SUPERVISOR') {
+        login('SUPERVISOR', data.session_id);
         navigate('/supervisor-dashboard');
       } else if (data.first_login_required) {
         alert('First login detected. Please change your password.');
@@ -50,33 +58,38 @@ export default function Login() {
   };
 
   return (
-    
-    <div className="page" style={{
-      backgroundImage: "url('/images/login-bg.jpg')",
-      backgroundSize: 'cover',
-      backgroundPosition: 'center',
-      backgroundRepeat: 'no-repeat'
-    }}>
-     
+    <div className="page">
       <div className="top-bar">
         {/* No logout or theme toggle on login */}
       </div>
 
-      <div className="container" style={{backdropFilter:'blur(2px)'}}>
+      <div className="container glass tilt" style={{backdropFilter:'blur(8px)', transform:'rotateX(0.5deg) translateZ(0)'}} onMouseMove={(e) => {
+        const rect = e.currentTarget.getBoundingClientRect();
+        const x = (e.clientX - rect.left) / rect.width - 0.5;
+        const y = (e.clientY - rect.top) / rect.height - 0.5;
+        e.currentTarget.style.transform = `rotateX(${0.5 - y * 2}deg) rotateY(${x * 2}deg) translateZ(0)`;
+      }}>
         <h1 className="title">Tool Management</h1>
+        <div className="login-decoration">
+          <div className="floating-shape shape-1" />
+          <div className="floating-shape shape-2" />
+          <div className="floating-shape shape-3" />
+        </div>
         <input
           type="text"
           placeholder="Enter ID"
           value={userId}
           onChange={(e) => setUserId(e.target.value)}
+          className="glass-input"
         />
         <input
           type="password"
           placeholder="Enter Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          className="glass-input"
         />
-        <button onClick={handleLogin}>Login</button>
+        <button onClick={handleLogin} className="glass-button">Login</button>
         <p className="link" onClick={() => navigate('/forgot-password')}>Forgot Password?</p>
       </div>
     </div>

@@ -1,5 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { UserProvider } from './context/UserContext';
+import Layout from './components/Layout';
 
 import Login from './pages/Login';
 import ForgotPassword from './pages/ForgotPassword';
@@ -16,43 +18,104 @@ import ToolAdditionRequestsPage from './pages/ToolAdditionRequestsPage';
 import IssueReportsPage from './pages/IssueReportsPage';
 import OfficerIssueReports from './pages/OfficerIssueReports';
 import OfficerNotifications from './pages/OfficerNotifications';
+import SupervisorResponse from './pages/SupervisorResponse';
 
 import RequestToolPage from './pages/RequestToolPage';
 import ReportIssuePage from './pages/ReportIssuePage';
 import SupervisorViewToolRequests from './pages/SupervisorViewToolRequests';
 import SupervisorToolAdditionRequests from './pages/SupervisorToolAdditionRequests';
 
-
-
 export default function App() {
   return (
-    <Router>
-      <Routes>
-        {/* Common routes */}
-        <Route path="/" element={<Login />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
+    <UserProvider>
+      <Router>
+        <Routes>
+          {/* Common routes */}
+          <Route path="/" element={<Login />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
 
-        {/* Officer dashboard + subpages */}
-        <Route path="/officer-dashboard" element={<OfficerDashboard />} />
-        <Route path="/officer/view-tool-requests" element={<ViewToolRequestsPage />} />
-        <Route path="/officer/manage-users" element={<ManageUsersPage />} />
-        <Route path="/officer/create-user" element={<CreateUserPage />} />
-        <Route path="/officer/delete-user" element={<DeleteUserPage />} />
-        <Route path="/officer/tool-addition-requests" element={<ToolAdditionRequestsPage />} />
-  <Route path="/officer/issue-reports" element={<OfficerIssueReports />} />
-        <Route path="/officer/notifications" element={<OfficerNotifications />} />
+          {/* Officer dashboard + subpages */}
+          <Route path="/officer-dashboard" element={
+            <Layout>
+              <OfficerDashboard />
+            </Layout>
+          } />
+          <Route path="/officer/view-tool-requests" element={
+            <Layout>
+              <ViewToolRequestsPage />
+            </Layout>
+          } />
+          <Route path="/officer/manage-users" element={
+            <Layout>
+              <ManageUsersPage />
+            </Layout>
+          } />
+          <Route path="/officer/create-user" element={
+            <Layout>
+              <CreateUserPage />
+            </Layout>
+          } />
+          <Route path="/officer/delete-user" element={
+            <Layout>
+              <DeleteUserPage />
+            </Layout>
+          } />
+          <Route path="/officer/tool-addition-requests" element={
+            <Layout>
+              <ToolAdditionRequestsPage />
+            </Layout>
+          } />
+          <Route path="/officer/issue-reports" element={
+            <Layout>
+              <OfficerIssueReports />
+            </Layout>
+          } />
+          <Route path="/officer/notifications" element={
+            <Layout>
+              <OfficerNotifications />
+            </Layout>
+          } />
+          <Route path="/officer/supervisor-response" element={
+            <Layout>
+              <SupervisorResponse />
+            </Layout>
+          } />
 
-        {/* Operator dashboard + subpages */}
-        <Route path="/operator-dashboard" element={<OperatorDashboard />} />
-        <Route path="/operator/request-tool" element={<RequestToolPage />} />
-        <Route path="/operator/report-issue" element={<ReportIssuePage />} />
+          {/* Operator dashboard + subpages */}
+          <Route path="/operator-dashboard" element={
+            <Layout>
+              <OperatorDashboard />
+            </Layout>
+          } />
+          <Route path="/operator/request-tool" element={
+            <Layout>
+              <RequestToolPage />
+            </Layout>
+          } />
+          <Route path="/operator/report-issue" element={
+            <Layout>
+              <ReportIssuePage />
+            </Layout>
+          } />
 
-        {/* Supervisor dashboard */}
-        <Route path="/supervisor-dashboard" element={<SupervisorDashboard />} />
-        <Route path="/supervisor/view-tool-requests" element={<SupervisorViewToolRequests />} />
-<Route path="/supervisor/tool-addition-requests" element={<SupervisorToolAdditionRequests />} />
-
-      </Routes>
-    </Router>
+          {/* Supervisor dashboard */}
+          <Route path="/supervisor-dashboard" element={
+            <Layout>
+              <SupervisorDashboard />
+            </Layout>
+          } />
+          <Route path="/supervisor/view-tool-requests" element={
+            <Layout>
+              <SupervisorViewToolRequests />
+            </Layout>
+          } />
+          <Route path="/supervisor/tool-addition-requests" element={
+            <Layout>
+              <SupervisorToolAdditionRequests />
+            </Layout>
+          } />
+        </Routes>
+      </Router>
+    </UserProvider>
   );
 }

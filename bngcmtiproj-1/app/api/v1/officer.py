@@ -22,17 +22,51 @@ from app.schemas.common import MessageOut
 from app.schemas.tool_requests import ApproveToolUsageOut
 from app.core.config import settings
 from app.core.security import hash_password
+from app.models.notification import Notification
+
+# New endpoint: Get officer notifications
+@router.get("/notifications")
+def get_officer_notifications(db: OrmSession = Depends(get_db), session_data: tuple = Depends(get_current_session)):
+    sess, user = session_data
+    officer_id = user.id
+    
+    # Get notifications for this officer
+    notifications = db.execute(
+        select(Notification)
+        .where(Notification.user_id == officer_id)
+        .order_by(Notification.created_at.desc())
+    ).scalars().all()
+    
+    return [
+        {
+            "id": n.id,
+            "title": n.title,
+            "description": n.description,
+            "message": n.message,
+            "target_url": n.target_url,
+            "created_at": str(n.created_at),
+            "is_read": getattr(n, 'is_read', False)
+        } for n in notifications
+    ]
+
 # Officer: View all reported tool issues
 @router.get("/tool-issues", response_model=list[ToolIssueOut])
 def list_tool_issues(db: OrmSession = Depends(get_db), session_data: tuple = Depends(get_current_session)):
     sess, user = session_data
+    print(f"[DEBUG] Officer {user.id} requesting tool issues")
+    
+    # Get all tool issues
     issues = db.execute(
         select(ToolIssue)
         .order_by(ToolIssue.created_at.desc())
     ).scalars().all()
-    print("[DEBUG] Officer fetched tool issues:", issues)
+    
+    print(f"[DEBUG] Found {len(issues)} tool issues")
+    for issue in issues:
+        print(f"[DEBUG] Issue {issue.id}: status={issue.status}, tool_id={issue.tool_id}, operator_id={issue.operator_id}")
+    
     # Return all required fields for each issue
-    return [
+    result = [
         ToolIssueOut(
             id=issue.id,
             tool_id=issue.tool_id,
@@ -43,13 +77,118 @@ def list_tool_issues(db: OrmSession = Depends(get_db), session_data: tuple = Dep
             resolved_at=issue.resolved_at
         ) for issue in issues
     ]
+    
+    print(f"[DEBUG] Returning {len(result)} issues")
+    return result
+
+# New endpoint: Officer responds to tool issue
+@router.post("/tool-issues/{issue_id}/respond")
+def respond_to_tool_issue(
+    issue_id: int, 
+    response: str, 
+    db: OrmSession = Depends(get_db), 
+    session_data: tuple = Depends(get_current_session)
+):
+    sess, officer = session_data
+    issue = db.execute(select(ToolIssue).where(ToolIssue.id == issue_id)).scalar_one_or_none()
+    
+    if not issue:
+        raise HTTPException(status_code=404, detail="Issue not found")
+    
+    # Update issue status and add officer response
+    issue.status = "RESPONDED"
+    issue.resolved_at = datetime.now(timezone.utc)
+    
+    # Notify the operator about the officer's response
+    from app.services.notifications import notify_user
+    notify_user(
+        db,
+        user_id=issue.operator_id,
+        role="OPERATOR",
+        title="Issue Response from Officer",
+        description=f"Officer has responded to your tool issue: {response[:50]}...",
+        target_url="/operator-dashboard",
+    )
+    
+    db.commit()
+    return {"message": "Response sent successfully"}
+
+# New endpoint: Officer approves tool issue
+@router.post("/tool-issues/{issue_id}/approve")
+def approve_tool_issue(
+    issue_id: int,
+    data: dict,
+    db: OrmSession = Depends(get_db),
+    session_data: tuple = Depends(get_current_session)
+):
+    sess, officer = session_data
+    issue = db.execute(select(ToolIssue).where(ToolIssue.id == issue_id)).scalar_one_or_none()
+    
+    if not issue:
+        raise HTTPException(status_code=404, detail="Issue not found")
+    
+    if issue.status != "OPEN":
+        raise HTTPException(status_code=400, detail="Issue already processed")
+    
+    # Update issue status
+    issue.status = "APPROVED"
+    issue.resolved_at = datetime.now(timezone.utc)
+    
+    # Notify the specific operator about approval
+    from app.services.notifications import notify_user
+    notify_user(
+        db,
+        user_id=issue.operator_id,
+        role="OPERATOR",
+        title="Tool Issue Approved",
+        description=f"Your tool issue has been approved by an officer. Response: {data.get('response', 'Issue approved')}",
+        target_url="/operator-dashboard",
+    )
+    
+    db.commit()
+    return {"message": "Issue approved successfully"}
+
+# New endpoint: Officer rejects tool issue
+@router.post("/tool-issues/{issue_id}/reject")
+def reject_tool_issue(
+    issue_id: int,
+    data: dict,
+    db: OrmSession = Depends(get_db),
+    session_data: tuple = Depends(get_current_session)
+):
+    sess, officer = session_data
+    issue = db.execute(select(ToolIssue).where(ToolIssue.id == issue_id)).scalar_one_or_none()
+    
+    if not issue:
+        raise HTTPException(status_code=404, detail="Issue not found")
+    
+    if issue.status != "OPEN":
+        raise HTTPException(status_code=400, detail="Issue already processed")
+    
+    # Update issue status
+    issue.status = "REJECTED"
+    issue.resolved_at = datetime.now(timezone.utc)
+    
+    # Notify the specific operator about rejection
+    from app.services.notifications import notify_user
+    notify_user(
+        db,
+        user_id=issue.operator_id,
+        role="OPERATOR",
+        title="Tool Issue Rejected",
+        description=f"Your tool issue has been rejected by an officer. Reason: {data.get('response', 'Issue rejected')}",
+        target_url="/operator-dashboard",
+    )
+    
+    db.commit()
+    return {"message": "Issue rejected successfully"}
+
 @router.get("/tool-requests", dependencies=[Depends(require_role(UserRole.OFFICER))])
-def list_pending_tool_requests_for_officer(db: OrmSession = Depends(get_db)):
+def list_all_tool_requests_for_officer(db: OrmSession = Depends(get_db)):
     rows = db.execute(
         select(ToolUsageRequest, ToolInventory.tool_name.label('tool_name'))
         .join(ToolInventory, ToolUsageRequest.tool_id == ToolInventory.id)
-        .where(ToolUsageRequest.status == RequestStatus.PENDING)
-        .order_by(ToolUsageRequest.requested_at.asc())
+        .order_by(ToolUsageRequest.requested_at.desc())  # Show newest first
     ).all()
     return [
         {
@@ -59,6 +198,9 @@ def list_pending_tool_requests_for_officer(db: OrmSession = Depends(get_db)):
             "tool_name": r.tool_name,
             "requested_qty": r.ToolUsageRequest.requested_qty,
             "requested_at": r.ToolUsageRequest.requested_at,
+            "status": r.ToolUsageRequest.status.value,  # Include status
+            "reviewed_at": r.ToolUsageRequest.reviewed_at,  # Include review time
+            "reviewer_remarks": r.ToolUsageRequest.reviewer_remarks,  # Include remarks
         } for r in rows
     ]
 
@@ -85,6 +227,19 @@ def officer_approve_tool_request(request_id: str, data=Depends(get_current_sessi
     req.reviewed_at = datetime.now(timezone.utc)
     req.reviewer_id = officer.id
     db.commit()
+    
+    # Notify all supervisors about the approval
+    supervisors = db.execute(select(User.id).where(User.role == UserRole.SUPERVISOR)).scalars().all()
+    for supervisor_id in supervisors:
+        notify_user(
+            db,
+            user_id=supervisor_id,
+            role="SUPERVISOR",
+            title="Tool Request Approved by Officer",
+            description=f"Officer {officer.full_name} approved tool request {request_id} for {req.requested_qty} of {inv.tool_name}",
+            target_url="/supervisor/view-tool-requests",
+        )
+    
     return ApproveToolUsageOut(
         request_id=req.request_id,
         status=req.status.value,
@@ -103,11 +258,29 @@ def officer_reject_tool_request(request_id: str, reason: str = "Not approved", d
         raise HTTPException(status_code=404, detail="Request not found")
     if req.status != RequestStatus.PENDING:
         raise HTTPException(status_code=400, detail="Request already processed")
+    
+    # Get tool information for notification
+    inv = db.get(ToolInventory, req.tool_id)
+    tool_name = inv.tool_name if inv else f"Tool ID {req.tool_id}"
+    
     from datetime import datetime, timezone
     req.status = RequestStatus.REJECTED
     req.reviewed_at = datetime.now(timezone.utc)
     req.reviewer_remarks = reason
     db.commit()
+    
+    # Notify all supervisors about the rejection
+    supervisors = db.execute(select(User.id).where(User.role == UserRole.SUPERVISOR)).scalars().all()
+    for supervisor_id in supervisors:
+        notify_user(
+            db,
+            user_id=supervisor_id,
+            role="SUPERVISOR",
+            title="Tool Request Rejected by Officer",
+            description=f"Officer rejected tool request {request_id} for {req.requested_qty} of {tool_name}. Reason: {reason}",
+            target_url="/supervisor/view-tool-requests",
+        )
+    
     return {"message": "Rejected"}
 
 
