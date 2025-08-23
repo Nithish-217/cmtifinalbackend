@@ -110,6 +110,92 @@ def list_operator_tool_requests(db: OrmSession = Depends(get_db), session_data: 
         } for r in rows
     ]
 
+# New endpoint: Get operator tool requests (for the new page)
+@router.get("/tool-requests")
+def get_operator_tool_requests(db: OrmSession = Depends(get_db), session_data: tuple = Depends(get_current_session)):
+    sess, user = session_data
+    operator_id = user.id
+    
+    # Get tool requests with tool information
+    requests = db.execute(
+        select(ToolUsageRequest, ToolInventory.tool_name)
+        .join(ToolInventory, ToolUsageRequest.tool_id == ToolInventory.id)
+        .where(ToolUsageRequest.operator_id == operator_id)
+        .order_by(ToolUsageRequest.requested_at.desc())
+    ).all()
+    
+    return [
+        {
+            "request_id": req.request_id,
+            "tool_id": req.tool_id,
+            "tool_name": tool_name,
+            "requested_qty": req.requested_qty,
+            "status": req.status.value,
+            "requested_at": str(req.requested_at),
+            "processed_at": str(req.reviewed_at) if req.reviewed_at else None,
+            "remarks": req.reviewer_remarks
+        } for req, tool_name in requests
+    ]
+
+# New endpoint: Get operator tool issues (for the new page)
+@router.get("/tool-issues")
+def get_operator_tool_issues(db: OrmSession = Depends(get_db), session_data: tuple = Depends(get_current_session)):
+    sess, user = session_data
+    operator_id = user.id
+    
+    # Get tool issues with tool information
+    issues = db.execute(
+        select(ToolIssue, ToolInventory.tool_name)
+        .join(ToolInventory, ToolIssue.tool_id == ToolInventory.id)
+        .where(ToolIssue.operator_id == operator_id)
+        .order_by(ToolIssue.reported_at.desc())
+    ).all()
+    
+    return [
+        {
+            "issue_id": issue.id,
+            "tool_id": issue.tool_id,
+            "tool_name": tool_name,
+            "description": issue.description,
+            "status": issue.status,
+            "reported_at": str(issue.reported_at),
+            "response": issue.response,
+            "response_at": str(issue.response_at) if issue.response_at else None
+        } for issue, tool_name in issues
+    ]
+
+# New endpoint: Get operator used tools (approved requests)
+@router.get("/used-tools")
+def get_operator_used_tools(db: OrmSession = Depends(get_db), session_data: tuple = Depends(get_current_session)):
+    sess, user = session_data
+    operator_id = user.id
+    
+    # Get approved tool requests with tool information
+    used_tools = db.execute(
+        select(ToolUsageRequest, ToolInventory)
+        .join(ToolInventory, ToolUsageRequest.tool_id == ToolInventory.id)
+        .where(
+            ToolUsageRequest.operator_id == operator_id,
+            ToolUsageRequest.status == RequestStatus.APPROVED
+        )
+        .order_by(ToolUsageRequest.reviewed_at.desc())
+    ).all()
+    
+    return [
+        {
+            "tool_id": req.tool_id,
+            "tool_name": tool.tool_name,
+            "range_mm": tool.range_mm,
+            "identification_code": tool.identification_code,
+            "make": tool.make,
+            "location": None,  # Not available in current model
+            "gauge": None,     # Not available in current model
+            "quantity_used": req.requested_qty,
+            "used_at": str(req.reviewed_at),
+            "remarks": None    # Not available in current model
+        } for req, tool in used_tools
+    ]
+
 # New endpoint: Get operator statistics
 @router.get("/statistics")
 def get_operator_statistics(db: OrmSession = Depends(get_db), session_data: tuple = Depends(get_current_session)):
@@ -242,9 +328,9 @@ def list_available_tools(db: OrmSession = Depends(get_db)):
             identification_code=t.identification_code,
             make=t.make,
             quantity=t.quantity,
-            location=None,
-            gauge=None,
-            remarks=None,
+            location=None,  # Not available in current model
+            gauge=None,     # Not available in current model
+            remarks=None,   # Not available in current model
             added_at=t.added_at
         ) for t in tools
     ]

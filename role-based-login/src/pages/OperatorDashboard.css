@@ -62,6 +62,36 @@
   background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
 }
 
+/* Clickable statistics boxes */
+.stat-box.clickable {
+  cursor: pointer;
+  position: relative;
+}
+
+.stat-box.clickable:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
+}
+
+.stat-box.clickable:active {
+  transform: translateY(-3px);
+  transition: transform 0.1s ease;
+}
+
+.click-hint {
+  font-size: 0.75rem;
+  color: #667eea;
+  margin-top: 8px;
+  font-weight: 500;
+  opacity: 0.8;
+  transition: opacity 0.3s ease;
+}
+
+.stat-box.clickable:hover .click-hint {
+  opacity: 1;
+  color: #4c51bf;
+}
+
 .stat-icon {
   font-size: 2.2rem;
   text-align: center;
@@ -415,6 +445,10 @@
   
   .stat-content h3 {
     font-size: 0.95rem;
+  }
+  
+  .click-hint {
+    font-size: 0.7rem;
   }
   
   .tool-request-section {

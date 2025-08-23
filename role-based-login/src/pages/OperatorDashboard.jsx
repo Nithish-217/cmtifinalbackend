@@ -144,36 +144,64 @@ export default function OperatorDashboard() {
     }
   };
 
+  const handleStatBoxClick = (type) => {
+    switch (type) {
+      case 'tools-used':
+        navigate('/operator/used-tools');
+        break;
+      case 'tool-requests':
+        navigate('/operator/tool-requests');
+        break;
+      case 'reported-issues':
+        navigate('/operator/reported-issues');
+        break;
+      default:
+        break;
+    }
+  };
+
   return (
     <div className="dashboard-container">
       <h1>Welcome, Operator!</h1>
       
       {/* Statistics Boxes */}
       <div className="stats-container">
-        <div className="stat-box glass">
+        <div 
+          className="stat-box glass clickable" 
+          onClick={() => handleStatBoxClick('tools-used')}
+        >
           <div className="stat-icon">🔧</div>
           <div className="stat-content">
             <h3>Total Tools Used</h3>
             <div className="stat-number">{statistics.totalToolsUsed}</div>
             <p>Approved tool requests</p>
+            <div className="click-hint">Click to view details</div>
           </div>
         </div>
         
-        <div className="stat-box glass">
+        <div 
+          className="stat-box glass clickable" 
+          onClick={() => handleStatBoxClick('tool-requests')}
+        >
           <div className="stat-icon">📋</div>
           <div className="stat-content">
             <h3>Requested Tools</h3>
             <div className="stat-number">{statistics.totalRequests}</div>
             <p>Total tool requests made</p>
+            <div className="click-hint">Click to view details</div>
           </div>
         </div>
         
-        <div className="stat-box glass">
+        <div 
+          className="stat-box glass clickable" 
+          onClick={() => handleStatBoxClick('reported-issues')}
+        >
           <div className="stat-icon">⚠️</div>
           <div className="stat-content">
             <h3>Reported Issues</h3>
             <div className="stat-number">{statistics.totalIssues}</div>
             <p>Issues reported to officers</p>
+            <div className="click-hint">Click to view details</div>
           </div>
         </div>
       </div>

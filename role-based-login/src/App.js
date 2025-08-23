@@ -25,6 +25,11 @@ import ReportIssuePage from './pages/ReportIssuePage';
 import SupervisorViewToolRequests from './pages/SupervisorViewToolRequests';
 import SupervisorToolAdditionRequests from './pages/SupervisorToolAdditionRequests';
 
+// New operator pages
+import OperatorToolRequests from './pages/OperatorToolRequests';
+import OperatorReportedIssues from './pages/OperatorReportedIssues';
+import OperatorUsedTools from './pages/OperatorUsedTools';
+
 export default function App() {
   return (
     <UserProvider>
@@ -95,6 +100,21 @@ export default function App() {
           <Route path="/operator/report-issue" element={
             <Layout>
               <ReportIssuePage />
+            </Layout>
+          } />
+          <Route path="/operator/tool-requests" element={
+            <Layout>
+              <OperatorToolRequests />
+            </Layout>
+          } />
+          <Route path="/operator/reported-issues" element={
+            <Layout>
+              <OperatorReportedIssues />
+            </Layout>
+          } />
+          <Route path="/operator/used-tools" element={
+            <Layout>
+              <OperatorUsedTools />
             </Layout>
           } />
 

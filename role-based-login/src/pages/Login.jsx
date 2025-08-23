@@ -69,6 +69,9 @@ export default function Login() {
         const y = (e.clientY - rect.top) / rect.height - 0.5;
         e.currentTarget.style.transform = `rotateX(${0.5 - y * 2}deg) rotateY(${x * 2}deg) translateZ(0)`;
       }}>
+        <div className="login-image-container">
+          <img src={require('../assets/login-image.jpg')} alt="Tool Management" className="login-image" />
+        </div>
         <h1 className="title">Tool Management</h1>
         <div className="login-decoration">
           <div className="floating-shape shape-1" />
