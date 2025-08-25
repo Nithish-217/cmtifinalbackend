@@ -126,6 +126,26 @@ def logout(x_session_id: str | None = None, db: OrmSession = Depends(get_db)):
         release_lock_if_owner(db, sess.role, sess)
     return MessageOut(message="Logged out")
 
+@router.post("/release-role-lock", response_model=MessageOut)
+def release_role_lock(x_session_id: str | None = None, db: OrmSession = Depends(get_db)):
+    print(f"/release-role-lock called with x_session_id={x_session_id}")
+    if not x_session_id:
+        print("No session_id provided to release role lock.")
+        return MessageOut(message="No session provided")
+    
+    sess = db.execute(select(SessionModel).where(SessionModel.session_id == x_session_id)).scalar_one_or_none()
+    if not sess:
+        print("Session not found for role lock release.")
+        return MessageOut(message="Session not found")
+    
+    if sess.role in (UserRole.OFFICER, UserRole.SUPERVISOR):
+        print(f"Releasing lock for role {sess.role} and session {sess.session_id}")
+        release_lock_if_owner(db, sess.role, sess)
+        return MessageOut(message=f"Role lock released for {sess.role.value}")
+    else:
+        print(f"Role {sess.role} does not require lock release")
+        return MessageOut(message="No lock to release")
+
 @router.post("/first-login-change", response_model=MessageOut)
 def first_login_change(payload: FirstLoginChangeIn, db: OrmSession = Depends(get_db)):
     user = db.execute(select(User).where(User.username == payload.username)).scalar_one_or_none()

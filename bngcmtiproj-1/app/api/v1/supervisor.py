@@ -194,6 +194,49 @@ def create_tool_addition(payload: ToolAdditionCreateIn, data=Depends(get_current
         created_at=row.created_at,
     )
 
+@router.get("/tool-addition-requests", dependencies=[Depends(require_role(UserRole.SUPERVISOR))])
+def get_tool_addition_requests(status: str = None, db: OrmSession = Depends(get_db), session_data: tuple = Depends(get_current_session)):
+    sess, user = session_data
+    supervisor_id = user.id
+    
+    print(f"[DEBUG] Getting tool addition requests for supervisor {supervisor_id}, status filter: {status}")
+    
+    try:
+        # Base query for supervisor's tool addition requests
+        query = select(ToolAdditionRequest).where(ToolAdditionRequest.requested_by == supervisor_id)
+        
+        # Apply status filter if provided
+        if status:
+            status_enum = RequestStatus(status.upper())
+            query = query.where(ToolAdditionRequest.status == status_enum)
+            print(f"[DEBUG] Filtering by status: {status_enum}")
+        
+        # Execute query
+        requests = db.execute(query.order_by(ToolAdditionRequest.created_at.desc())).scalars().all()
+        
+        print(f"[DEBUG] Found {len(requests)} tool addition requests")
+        
+        result = [
+            {
+                "id": req.id,
+                "tool_name": req.tool_name,
+                "status": req.status.value,
+                "requested_by": req.requested_by,
+                "created_at": req.created_at.isoformat() if req.created_at else None,
+                "reviewed_at": req.reviewed_at.isoformat() if req.reviewed_at else None,
+                "reviewer_id": req.reviewer_id,
+                "reviewer_remarks": req.reviewer_remarks
+            } for req in requests
+        ]
+        
+        return result
+        
+    except Exception as e:
+        print(f"[ERROR] Error fetching tool addition requests: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
 @router.get("/logs/approved-usage", dependencies=[Depends(require_role(UserRole.SUPERVISOR))])
 def approved_usage_logs(db: OrmSession = Depends(get_db)):
     rows = db.execute(

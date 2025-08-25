@@ -26,6 +26,10 @@ import RequestToolPage from './pages/RequestToolPage';
 import ReportIssuePage from './pages/ReportIssuePage';
 import SupervisorViewToolRequests from './pages/SupervisorViewToolRequests';
 import SupervisorToolAdditionRequests from './pages/SupervisorToolAdditionRequests';
+import SupervisorYourRequests from './pages/SupervisorYourRequests';
+import SupervisorPendingRequests from './pages/SupervisorPendingRequests';
+import SupervisorApprovedRequests from './pages/SupervisorApprovedRequests';
+import SupervisorRejectedRequests from './pages/SupervisorRejectedRequests';
 
 // New operator pages
 import OperatorToolRequests from './pages/OperatorToolRequests';
@@ -144,6 +148,26 @@ export default function App() {
           <Route path="/supervisor/tool-addition-requests" element={
             <Layout>
               <SupervisorToolAdditionRequests />
+            </Layout>
+          } />
+          <Route path="/supervisor/your-requests" element={
+            <Layout>
+              <SupervisorYourRequests />
+            </Layout>
+          } />
+          <Route path="/supervisor/pending-requests" element={
+            <Layout>
+              <SupervisorPendingRequests />
+            </Layout>
+          } />
+          <Route path="/supervisor/approved-requests" element={
+            <Layout>
+              <SupervisorApprovedRequests />
+            </Layout>
+          } />
+          <Route path="/supervisor/rejected-requests" element={
+            <Layout>
+              <SupervisorRejectedRequests />
             </Layout>
           } />
         </Routes>

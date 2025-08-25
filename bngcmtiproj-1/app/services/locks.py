@@ -50,9 +50,13 @@ def acquire_lock(db: OrmSession, role: UserRole, session_row: SessionModel):
 def release_lock_if_owner(db: OrmSession, role: UserRole, session_row: SessionModel):
     lock = db.execute(select(RoleLock).where(RoleLock.role == role)).scalar_one_or_none()
     if not lock:
+        print(f"No lock found for role {role}")
         return
     # Compare session_id as string
     if lock.session_id == session_row.session_id:
         print(f"Releasing lock for role {role} and session {session_row.session_id}")
         db.delete(lock)
         db.commit()
+        print(f"Lock successfully deleted for role {role}")
+    else:
+        print(f"Lock session mismatch: lock.session_id={lock.session_id}, session.session_id={session_row.session_id}")

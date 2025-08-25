@@ -46,6 +46,31 @@
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
 }
 
+.dashboard-blocks.small-boxes {
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.dashboard-blocks.small-boxes .dashboard-block {
+  padding: 20px;
+  min-height: 120px;
+}
+
+.dashboard-blocks.small-boxes .card-icon {
+  width: 40px;
+  height: 40px;
+}
+
+.dashboard-blocks.small-boxes .card-title {
+  font-size: 1.1rem;
+}
+
+.dashboard-blocks.small-boxes .card-desc {
+  font-size: 0.9rem;
+}
+
+
 .dashboard-block {
   background: white;
   border-radius: 20px;
@@ -104,6 +129,16 @@
   }
   
   .dashboard-blocks.horizontal {
+    grid-template-columns: 1fr;
+  }
+  
+  .dashboard-blocks.small-boxes {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .dashboard-blocks.small-boxes {
     grid-template-columns: 1fr;
   }
 }
