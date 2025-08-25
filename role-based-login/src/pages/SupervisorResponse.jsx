@@ -1,52 +1,74 @@
 import React, { useState, useEffect } from 'react';
+import FilterBar from '../components/FilterBar';
 import './SupervisorResponse.css';
 
 export default function SupervisorResponse() {
   const [responses, setResponses] = useState([]);
+  const [filteredResponses, setFilteredResponses] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [dateFilter, setDateFilter] = useState('');
 
   useEffect(() => {
-    // Simulate fetching supervisor responses
-    // In a real app, this would fetch from the backend
-    setTimeout(() => {
-      setResponses([
-        {
-          id: 1,
-          toolName: 'Drill Machine',
-          operatorName: 'John Doe',
-          requestDate: '2024-01-15',
-          responseDate: '2024-01-16',
-          status: 'APPROVED',
-          supervisorName: 'Mike Johnson',
-          comments: 'Approved for maintenance work. Please return by end of day.',
-          quantity: 1
-        },
-        {
-          id: 2,
-          toolName: 'Welding Kit',
-          operatorName: 'Jane Smith',
-          requestDate: '2024-01-14',
-          responseDate: '2024-01-15',
-          status: 'REJECTED',
-          supervisorName: 'Mike Johnson',
-          comments: 'Currently in use by another team. Please request again next week.',
-          quantity: 1
-        },
-        {
-          id: 3,
-          toolName: 'Safety Harness',
-          operatorName: 'Bob Wilson',
-          requestDate: '2024-01-13',
-          responseDate: '2024-01-14',
-          status: 'APPROVED',
-          supervisorName: 'Sarah Davis',
-          comments: 'Approved for height work. Ensure proper safety protocols.',
-          quantity: 2
+    async function fetchResponses() {
+      setLoading(true);
+      try {
+        const sessionId = localStorage.getItem('session_id');
+        const response = await fetch('http://localhost:8000/api/v1/supervisor/tool-requests', {
+          headers: { 'x-session-id': sessionId || '' }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          // Filter only responded requests (approved or rejected)
+          const respondedRequests = Array.isArray(data) ? data.filter(req => 
+            req.status === 'APPROVED' || req.status === 'REJECTED'
+          ) : [];
+          setResponses(respondedRequests);
+          setFilteredResponses(respondedRequests);
+        } else {
+          setError('Failed to fetch responses');
         }
-      ]);
-      setLoading(false);
-    }, 1000);
+      } catch (err) {
+        setError('Error connecting to server');
+        console.error('Error fetching responses:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchResponses();
   }, []);
+
+  // Filter function
+  const handleFilter = (searchTerm, dateValue) => {
+    let filtered = [...responses];
+
+    // Filter by search term (tool name, operator name, request ID)
+    if (searchTerm.trim()) {
+      filtered = filtered.filter(response =>
+        response.tool_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        response.operator_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        response.request_id?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Filter by date
+    if (dateValue) {
+      filtered = filtered.filter(response => {
+        const responseDate = new Date(response.requested_at).toDateString();
+        const filterDate = new Date(dateValue).toDateString();
+        return responseDate === filterDate;
+      });
+    }
+
+    setFilteredResponses(filtered);
+  };
+
+  // Clear filters
+  const handleClearFilters = () => {
+    setFilteredResponses(responses);
+  };
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -85,59 +107,77 @@ export default function SupervisorResponse() {
     );
   }
 
+  if (error) {
+    return (
+      <div className="supervisor-response-container">
+        <div className="error-message">
+          <h3>Error Loading Responses</h3>
+          <p>{error}</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="supervisor-response-container">
       <div className="page-header">
         <h1>Supervisor Responses</h1>
-        <p>View supervisor responses to tool requests from operators</p>
+        <p>View supervisor responses to tool requests from operators ({filteredResponses.length} of {responses.length} responses)</p>
       </div>
 
-      <div className="responses-grid">
-        {responses.map((response) => (
-          <div key={response.id} className="response-card">
-            <div className="response-header">
-              <div className="tool-info">
-                <h3>{response.toolName}</h3>
-                <span className="operator-name">Requested by: {response.operatorName}</span>
-              </div>
-              <div className="status-badge" style={{ backgroundColor: getStatusColor(response.status) }}>
-                <span className="status-icon">{getStatusIcon(response.status)}</span>
-                {response.status}
-              </div>
-            </div>
-            
-            <div className="response-details">
-              <div className="detail-row">
-                <span className="detail-label">Quantity:</span>
-                <span className="detail-value">{response.quantity}</span>
-              </div>
-              <div className="detail-row">
-                <span className="detail-label">Request Date:</span>
-                <span className="detail-value">{response.requestDate}</span>
-              </div>
-              <div className="detail-row">
-                <span className="detail-label">Response Date:</span>
-                <span className="detail-value">{response.responseDate}</span>
-              </div>
-              <div className="detail-row">
-                <span className="detail-label">Supervisor:</span>
-                <span className="detail-value">{response.supervisorName}</span>
-              </div>
-            </div>
-            
-            <div className="response-comments">
-              <h4>Comments:</h4>
-              <p>{response.comments}</p>
-            </div>
-          </div>
-        ))}
-      </div>
+      <FilterBar
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        dateFilter={dateFilter}
+        setDateFilter={setDateFilter}
+        onSearch={handleFilter}
+        onClear={handleClearFilters}
+        placeholder="Search by tool name, operator, or request ID..."
+      />
 
-      {responses.length === 0 && (
+      {filteredResponses.length === 0 ? (
         <div className="no-responses">
           <div className="no-responses-icon">📭</div>
           <h3>No Responses Yet</h3>
           <p>Supervisor responses will appear here once they review tool requests.</p>
+        </div>
+      ) : (
+        <div className="responses-table-container">
+          <table className="responses-table">
+            <thead>
+              <tr>
+                <th>Request ID</th>
+                <th>Tool Name</th>
+                <th>Operator</th>
+                <th>Quantity</th>
+                <th>Request Date</th>
+                <th>Status</th>
+                <th>Response Date</th>
+                <th>Comments</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredResponses.map((response) => (
+                <tr key={response.request_id}>
+                  <td>{response.request_id}</td>
+                  <td>{response.tool_name}</td>
+                  <td>{response.operator_name || 'Unknown'}</td>
+                  <td>{response.requested_qty}</td>
+                  <td>{new Date(response.requested_at).toLocaleDateString()}</td>
+                  <td>
+                    <span 
+                      className={`status-badge ${response.status.toLowerCase()}`}
+                      style={{ backgroundColor: getStatusColor(response.status) }}
+                    >
+                      {getStatusIcon(response.status)} {response.status}
+                    </span>
+                  </td>
+                  <td>{response.updated_at ? new Date(response.updated_at).toLocaleDateString() : '-'}</td>
+                  <td>{response.comments || 'No comments'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
     </div>

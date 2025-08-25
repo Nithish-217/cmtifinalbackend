@@ -312,6 +312,11 @@ def create_tool_request(
 def test():
     return {"status": "operator router loaded"}
 
+# Test endpoint for collect functionality
+@router.get("/test-collect")
+def test_collect():
+    return {"status": "collect endpoint accessible", "available_statuses": [status.value for status in RequestStatus]}
+
 
 # New /tools endpoint: returns only fields present in ToolInventory
 @router.get("/tools", response_model=list[ToolListItem])
@@ -335,3 +340,58 @@ def list_available_tools(db: OrmSession = Depends(get_db)):
         ) for t in tools
     ]
     return result
+
+# New endpoint: Collect approved tool
+@router.post("/collect-tool/{request_id}")
+def collect_tool(
+    request_id: str,
+    db: OrmSession = Depends(get_db),
+    session_data: tuple = Depends(get_current_session)
+):
+    try:
+        sess, user = session_data
+        operator_id = user.id
+        
+        print(f"[DEBUG] Collect tool request: {request_id} by operator {operator_id}")
+        
+        # Find the tool request
+        request = db.execute(
+            select(ToolUsageRequest)
+            .where(
+                ToolUsageRequest.request_id == request_id,
+                ToolUsageRequest.operator_id == operator_id
+            )
+        ).scalar_one_or_none()
+        
+        if not request:
+            print(f"[DEBUG] Tool request not found: {request_id}")
+            raise HTTPException(status_code=404, detail="Tool request not found")
+        
+        print(f"[DEBUG] Found request with status: {request.status}")
+        
+        if request.status != RequestStatus.APPROVED:
+            raise HTTPException(status_code=400, detail=f"Tool request status is {request.status}, not approved")
+        
+        # Get tool information for response
+        tool = db.get(ToolInventory, request.tool_id)
+        if not tool:
+            raise HTTPException(status_code=404, detail="Tool not found")
+        
+        # Update status to RECEIVED (collected)
+        request.status = RequestStatus.RECEIVED
+        db.commit()
+        
+        print(f"[DEBUG] Successfully updated status to COLLECTED")
+        
+        return {
+            "message": f"Tool {tool.tool_name} (ID: {tool.id}) collected successfully!",
+            "tool_name": tool.tool_name,
+            "tool_id": tool.id,
+            "request_id": request_id,
+            "status": "COLLECTED"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[ERROR] Unexpected error in collect_tool: {e}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")

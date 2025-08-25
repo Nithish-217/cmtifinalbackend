@@ -27,13 +27,18 @@ export default function Login() {
         alert(data.detail || 'Login failed');
         return;
       }
-      
-      // Store session_id and user_id in localStorage
+
+      // Store session_id, user_id, and full_name in localStorage
       if (data.session_id) {
         localStorage.setItem('session_id', data.session_id);
       }
       localStorage.setItem('user_id', userId);
       
+      // Store full name if available from login response
+      if (data.full_name) {
+        localStorage.setItem('full_name', data.full_name);
+      }
+
       if (data.role === 'OFFICER') {
         login('OFFICER', data.session_id);
         navigate('/officer-dashboard');
@@ -58,19 +63,39 @@ export default function Login() {
   };
 
   return (
-    <div className="page">
+    <div
+      className="page"
+      style={{
+        backgroundImage: "url('https://i.postimg.cc/c1vYQTyc/9703773.jpg')",
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}
+    >
       <div className="top-bar">
         {/* No logout or theme toggle on login */}
       </div>
 
-      <div className="container glass tilt" style={{backdropFilter:'blur(8px)', transform:'rotateX(0.5deg) translateZ(0)'}} onMouseMove={(e) => {
-        const rect = e.currentTarget.getBoundingClientRect();
-        const x = (e.clientX - rect.left) / rect.width - 0.5;
-        const y = (e.clientY - rect.top) / rect.height - 0.5;
-        e.currentTarget.style.transform = `rotateX(${0.5 - y * 2}deg) rotateY(${x * 2}deg) translateZ(0)`;
-      }}>
+      <div
+        className="container glass tilt"
+        style={{
+          backdropFilter: 'blur(8px)',
+          transform: 'rotateX(0.5deg) translateZ(0)',
+          padding: '2rem'
+        }}
+        onMouseMove={(e) => {
+          const rect = e.currentTarget.getBoundingClientRect();
+          const x = (e.clientX - rect.left) / rect.width - 0.5;
+          const y = (e.clientY - rect.top) / rect.height - 0.5;
+          e.currentTarget.style.transform = `rotateX(${0.5 - y * 2}deg) rotateY(${x * 2}deg) translateZ(0)`;
+        }}
+      >
         <div className="login-image-container">
-          <img src={require('../assets/login-image.jpg')} alt="Tool Management" className="login-image" />
+          
         </div>
         <h1 className="title">Tool Management</h1>
         <div className="login-decoration">
@@ -92,8 +117,12 @@ export default function Login() {
           onChange={(e) => setPassword(e.target.value)}
           className="glass-input"
         />
-        <button onClick={handleLogin} className="glass-button">Login</button>
-        <p className="link" onClick={() => navigate('/forgot-password')}>Forgot Password?</p>
+        <button onClick={handleLogin} className="glass-button">
+          Login
+        </button>
+        <p className="link" onClick={() => navigate('/forgot-password')}>
+          Forgot Password?
+        </p>
       </div>
     </div>
   );

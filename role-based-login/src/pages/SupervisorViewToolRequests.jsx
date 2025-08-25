@@ -1,11 +1,15 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import FilterBar from '../components/FilterBar';
 import './SupervisorViewToolRequests.css';
 
 export default function SupervisorViewToolRequests() {
   const [requests, setRequests] = useState([]);
+  const [filteredRequests, setFilteredRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [actionMsg, setActionMsg] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [dateFilter, setDateFilter] = useState('');
 
   // Rewritten fetch logic for supervisor tool requests
   const fetchRequests = async () => {
@@ -26,6 +30,7 @@ export default function SupervisorViewToolRequests() {
       const data = await res.json();
       console.log('Fetched supervisor requests:', data);
       setRequests(data);
+      setFilteredRequests(data);
     } catch (err) {
       console.error('Supervisor requests error:', err);
       setError(`Failed to fetch requests: ${err.message}`);
@@ -37,6 +42,38 @@ export default function SupervisorViewToolRequests() {
   useEffect(() => {
     fetchRequests();
   }, []);
+
+  // Filter function
+  const handleFilter = (searchTerm, dateValue) => {
+    let filtered = [...requests];
+
+    // Filter by search term (tool name, operator name, request ID)
+    if (searchTerm.trim()) {
+      filtered = filtered.filter(request =>
+        request.tool_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        request.operator_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        request.request_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        request.status?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Filter by date (requested_at)
+    if (dateValue) {
+      filtered = filtered.filter(request => {
+        if (!request.requested_at) return false;
+        const requestDate = new Date(request.requested_at).toDateString();
+        const filterDate = new Date(dateValue).toDateString();
+        return requestDate === filterDate;
+      });
+    }
+
+    setFilteredRequests(filtered);
+  };
+
+  // Clear filters
+  const handleClearFilters = () => {
+    setFilteredRequests(requests);
+  };
 
   const handleAction = async (requestId, action) => {
     setActionMsg('');
@@ -106,7 +143,20 @@ export default function SupervisorViewToolRequests() {
 
   return (
     <div className="supervisor-view-tool-requests-container">
-      <h1>Tool Requests Management</h1>
+      <div className="page-header">
+        <h1>Tool Requests Management</h1>
+        <p>Review and approve/reject tool requests from operators ({filteredRequests.length} of {requests.length} requests)</p>
+      </div>
+
+      <FilterBar
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        dateFilter={dateFilter}
+        setDateFilter={setDateFilter}
+        onSearch={handleFilter}
+        onClear={handleClearFilters}
+        placeholder="Search by tool name, operator, request ID, or status..."
+      />
       
       {actionMsg && <div className="success-message">{actionMsg}</div>}
       {error && <div className="error-message">{error}</div>}
@@ -128,12 +178,12 @@ export default function SupervisorViewToolRequests() {
               </tr>
             </thead>
             <tbody>
-              {requests.length === 0 ? (
+              {filteredRequests.length === 0 ? (
                 <tr>
                   <td colSpan="7" className="no-requests">No tool requests found</td>
                 </tr>
               ) : (
-                requests.map(request => (
+                filteredRequests.map(request => (
                   <tr key={request.request_id} className={`request-row ${request.status.toLowerCase()}`}>
                     <td>{request.request_id}</td>
                     <td>{request.tool_name}</td>

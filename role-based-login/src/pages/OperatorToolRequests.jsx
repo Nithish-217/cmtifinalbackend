@@ -36,6 +36,42 @@ export default function OperatorToolRequests() {
     );
   };
 
+  const handleCollectTool = async (requestId, toolName, toolId) => {
+    try {
+      const sessionId = localStorage.getItem('session_id');
+      console.log('Attempting to collect tool:', { requestId, sessionId });
+      
+      const res = await fetch(`http://localhost:8000/api/v1/operator/collect-tool/${requestId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(sessionId ? { 'x-session-id': sessionId } : {})
+        }
+      });
+      
+      console.log('Response status:', res.status);
+      
+      if (res.ok) {
+        const data = await res.json();
+        console.log('Success response:', data);
+        alert(`✅ Tool Collected Successfully!\n\nTool: ${data.tool_name}\nID: ${data.tool_id}\nRequest ID: ${data.request_id}`);
+        fetchRequests(); // Refresh the requests list
+      } else {
+        const errorText = await res.text();
+        console.error('Error response:', res.status, errorText);
+        try {
+          const errorData = JSON.parse(errorText);
+          alert(`Error: ${errorData.detail || 'Failed to collect tool'}`);
+        } catch {
+          alert(`Error ${res.status}: ${errorText || 'Failed to collect tool'}`);
+        }
+      }
+    } catch (err) {
+      console.error('Network error:', err);
+      alert(`Network error: ${err.message || 'Failed to collect tool'}`);
+    }
+  };
+
   if (loading) {
     return (
       <div className="operator-tool-requests-container">
@@ -69,6 +105,7 @@ export default function OperatorToolRequests() {
                 <th>Requested At</th>
                 <th>Processed At</th>
                 <th>Remarks</th>
+                <th>Action</th>
               </tr>
             </thead>
             <tbody>
@@ -82,6 +119,23 @@ export default function OperatorToolRequests() {
                   <td>{request.requested_at ? new Date(request.requested_at).toLocaleString() : 'N/A'}</td>
                   <td>{request.processed_at ? new Date(request.processed_at).toLocaleString() : 'N/A'}</td>
                   <td>{request.remarks || 'N/A'}</td>
+                  <td>
+                    {request.status.toLowerCase() === 'approved' ? (
+                      <button 
+                        className="collect-btn"
+                        onClick={() => handleCollectTool(request.request_id, request.tool_name, request.tool_id)}
+                      >
+                        🔧 Collect
+                      </button>
+                    ) : (
+                      <span className="no-action">
+                        {request.status.toLowerCase() === 'pending' ? 'Waiting...' : 
+                         request.status.toLowerCase() === 'rejected' ? 'Rejected' : 
+                         request.status.toLowerCase() === 'received' ? '✅ Collected' : 
+                         request.status.toLowerCase() === 'collected' ? '✅ Collected' : '-'}
+                      </span>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>

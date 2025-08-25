@@ -7,60 +7,77 @@ import './TopBar.css';
 export default function TopBar({ onLogout }) {
   const navigate = useNavigate();
   const { logout } = useUser();
-  const [notifications, setNotifications] = useState([]);
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
+  // const [notifications, setNotifications] = useState([]);
+  // const [showNotifications, setShowNotifications] = useState(false);
+  // const [unreadCount, setUnreadCount] = useState(0);
 
-  useEffect(() => {
-    const fetchNotifications = async () => {
-      try {
-        const sessionId = localStorage.getItem('session_id');
-        const userRole = localStorage.getItem('user_role');
+  // useEffect(() => {
+  //   const fetchNotifications = async () => {
+  //     try {
+  //       const sessionId = localStorage.getItem('session_id');
+  //       const userRole = localStorage.getItem('user_role');
         
-        if (sessionId) {
-          let endpoint = '';
-          switch (userRole) {
-            case 'OPERATOR':
-              endpoint = '/api/v1/operator/notifications';
-              break;
-            case 'OFFICER':
-              endpoint = '/api/v1/officer/notifications';
-              break;
-            case 'SUPERVISOR':
-              endpoint = '/api/v1/supervisor/notifications';
-              break;
-            default:
-              return;
-          }
+  //       if (sessionId) {
+  //         let endpoint = '';
+  //         switch (userRole) {
+  //           case 'OPERATOR':
+  //             endpoint = '/api/v1/operator/notifications';
+  //             break;
+  //           case 'OFFICER':
+  //             endpoint = '/api/v1/officer/notifications';
+  //             break;
+  //           case 'SUPERVISOR':
+  //             endpoint = '/api/v1/supervisor/notifications';
+  //             break;
+  //           default:
+  //             return;
+  //         }
           
-          const res = await fetch(`http://localhost:8000${endpoint}`, {
-            headers: {
-              'Content-Type': 'application/json',
-              'x-session-id': sessionId
-            }
-          });
-          if (res.ok) {
-            const data = await res.json();
-            setNotifications(data);
-            setUnreadCount(data.filter(n => !n.is_read).length);
-          }
-        }
-      } catch (err) {
-        console.error('Failed to fetch notifications:', err);
-      }
-    };
+  //         const res = await fetch(`http://localhost:8000${endpoint}`, {
+  //           headers: {
+  //             'Content-Type': 'application/json',
+  //             'x-session-id': sessionId
+  //           }
+  //         });
+  //         if (res.ok) {
+  //           const data = await res.json();
+  //           setNotifications(data);
+  //           setUnreadCount(data.filter(n => !n.is_read).length);
+  //         }
+  //       }
+  //     } catch (err) {
+  //       console.error('Failed to fetch notifications:', err);
+  //     }
+  //   };
 
-    fetchNotifications();
+  //   fetchNotifications();
     
-    // Refresh notifications every 30 seconds
-    const interval = setInterval(fetchNotifications, 30000);
-    return () => clearInterval(interval);
-  }, []);
+  //   // Refresh notifications every 30 seconds
+  //   const interval = setInterval(fetchNotifications, 30000);
+  //   return () => clearInterval(interval);
+  // }, []);
 
   const handleLogout = async () => {
     try {
       const sessionId = localStorage.getItem('session_id');
+      const userRole = localStorage.getItem('user_role');
+      
       if (sessionId) {
+        // Release role lock before logout
+        if (userRole === 'SUPERVISOR' || userRole === 'OFFICER') {
+          try {
+            await fetch('http://localhost:8000/api/auth/release-role-lock', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-session-id': sessionId
+              }
+            });
+          } catch (lockErr) {
+            console.error('Failed to release role lock:', lockErr);
+          }
+        }
+        
         await fetch('http://localhost:8000/api/auth/logout', {
           method: 'POST',
           headers: {
@@ -77,18 +94,18 @@ export default function TopBar({ onLogout }) {
     }
   };
 
-  const toggleNotifications = () => {
-    setShowNotifications(!showNotifications);
-  };
+  // const toggleNotifications = () => {
+  //   setShowNotifications(!showNotifications);
+  // };
 
-  const markAsRead = (notificationId) => {
-    setNotifications(prev => 
-      prev.map(n => 
-        n.id === notificationId ? { ...n, is_read: true } : n
-      )
-    );
-    setUnreadCount(prev => Math.max(0, prev - 1));
-  };
+  // const markAsRead = (notificationId) => {
+  //   setNotifications(prev => 
+  //     prev.map(n => 
+  //       n.id === notificationId ? { ...n, is_read: true } : n
+  //     )
+  //   );
+  //   setUnreadCount(prev => Math.max(0, prev - 1));
+  // };
 
   return (
     <div className="top-bar">
@@ -97,8 +114,8 @@ export default function TopBar({ onLogout }) {
           <h1>CMTI Tool Management System</h1>
         </div>
         <div className="top-bar-right">
-          {/* Notification Bell */}
-          <div className="notification-container">
+          {/* Notification Bell - Commented Out */}
+          {/* <div className="notification-container">
             <button 
               className={`notification-bell ${unreadCount > 0 ? 'has-notifications' : ''}`}
               onClick={toggleNotifications}
@@ -110,7 +127,6 @@ export default function TopBar({ onLogout }) {
               )}
             </button>
             
-            {/* Notifications Dropdown */}
             {showNotifications && (
               <div className="notifications-dropdown">
                 <div className="notifications-header">
@@ -143,7 +159,7 @@ export default function TopBar({ onLogout }) {
                 </div>
               </div>
             )}
-          </div>
+          </div> */}
           
           <button className="logout-btn" onClick={handleLogout}>
             Logout

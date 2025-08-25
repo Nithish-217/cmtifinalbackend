@@ -1,10 +1,36 @@
 // src/pages/SupervisorDashboard.jsx
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './SupervisorDashboard.css';
 
 export default function SupervisorDashboard() {
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // Fetch user profile data to get full name
+    const fetchUserProfile = async () => {
+      try {
+        const sessionId = localStorage.getItem('session_id');
+        if (sessionId) {
+          const response = await fetch('http://localhost:8000/api/auth/profile', {
+            headers: {
+              'x-session-id': sessionId
+            }
+          });
+          if (response.ok) {
+            const data = await response.json();
+            if (data.full_name) {
+              localStorage.setItem('full_name', data.full_name);
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch profile:', err);
+      }
+    };
+    
+    fetchUserProfile();
+  }, []);
 
   return (
     <div className="dashboard-container">

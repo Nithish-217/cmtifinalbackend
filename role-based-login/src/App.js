@@ -15,8 +15,10 @@ import ManageUsersPage from './pages/ManageUsersPage';
 import CreateUserPage from './pages/CreateUserPage';
 import DeleteUserPage from './pages/DeleteUserPage';
 import ToolAdditionRequestsPage from './pages/ToolAdditionRequestsPage';
-import IssueReportsPage from './pages/IssueReportsPage';
+// import IssueReportsPage from './pages/IssueReportsPage';
 import OfficerIssueReports from './pages/OfficerIssueReports';
+import OfficerInventoryPage from './pages/OfficerInventoryPage';
+import OfficerAvailableTools from './pages/OfficerAvailableTools';
 import OfficerNotifications from './pages/OfficerNotifications';
 import SupervisorResponse from './pages/SupervisorResponse';
 
@@ -78,6 +80,16 @@ export default function App() {
           <Route path="/officer/notifications" element={
             <Layout>
               <OfficerNotifications />
+            </Layout>
+          } />
+          <Route path="/officer/inventory" element={
+            <Layout>
+              <OfficerInventoryPage />
+            </Layout>
+          } />
+          <Route path="/officer/available-tools" element={
+            <Layout>
+              <OfficerAvailableTools />
             </Layout>
           } />
           <Route path="/officer/supervisor-response" element={

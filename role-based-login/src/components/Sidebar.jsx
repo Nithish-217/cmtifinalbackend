@@ -15,11 +15,10 @@ export default function Sidebar({ userRole }) {
       case 'OFFICER':
         return [
           { path: '/officer-dashboard', label: 'Dashboard', icon: '🏠' },
-          { path: '/officer/view-tool-requests', label: 'View Tool Requests', icon: '📋' },
+          { path: '/officer/view-tool-requests', label: 'Supervisor Response', icon: '📋' },
           { path: '/officer/manage-users', label: 'Manage Users', icon: '👥' },
           { path: '/officer/tool-addition-requests', label: 'Tool Addition Requests', icon: '➕' },
-          { path: '/officer/issue-reports', label: 'Issue Reports', icon: '⚠️' },
-          { path: '/officer/supervisor-response', label: 'Supervisor Response', icon: '📢' }
+          { path: '/officer/issue-reports', label: 'Issue Reports', icon: '⚠️' }
         ];
       case 'OPERATOR':
         return [

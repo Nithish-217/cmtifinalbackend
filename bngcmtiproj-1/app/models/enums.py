@@ -17,6 +17,7 @@ class RequestStatus(str, enum.Enum):
     APPROVED = "APPROVED"
     REJECTED = "REJECTED"
     RECEIVED = "RECEIVED"
+    COLLECTED = "COLLECTED"
     RETURNED = "RETURNED"
     CANCELLED = "CANCELLED"
 

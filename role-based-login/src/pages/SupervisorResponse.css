@@ -26,10 +26,50 @@
   opacity: 0.9;
 }
 
+.responses-table-container {
+  margin-top: 20px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 15px;
+  padding: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.responses-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: transparent;
+}
+
+.responses-table th,
+.responses-table td {
+  padding: 12px 15px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.responses-table th {
+  background: rgba(255, 255, 255, 0.1);
+  font-weight: 600;
+  color: #ffffff;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  letter-spacing: 0.5px;
+}
+
+.responses-table td {
+  color: #e5e7eb;
+}
+
+.responses-table tr:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
 .responses-grid {
   display: grid;
-  gap: 25px;
-  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
 }
 
 .response-card {

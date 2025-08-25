@@ -6,6 +6,9 @@ import './OperatorDashboard.css';
 export default function OperatorDashboard() {
   const navigate = useNavigate();
   const [tools, setTools] = useState([]);
+  const [filteredTools, setFilteredTools] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showResults, setShowResults] = useState(false);
   const [selectedTool, setSelectedTool] = useState(null);
   const [qty, setQty] = useState(1);
   const [success, setSuccess] = useState('');
@@ -88,6 +91,36 @@ export default function OperatorDashboard() {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, []);
+
+
+  const handleSearch = (query = searchQuery) => {
+    if (!query.trim()) {
+      setError('Please enter a search term.');
+      return;
+    }
+    
+    const filtered = tools.filter(tool => 
+      tool.tool_name?.toLowerCase().includes(query.toLowerCase()) ||
+      tool.identification_code?.toLowerCase().includes(query.toLowerCase()) ||
+      tool.make?.toLowerCase().includes(query.toLowerCase()) ||
+      tool.location?.toLowerCase().includes(query.toLowerCase()) ||
+      tool.gauge?.toLowerCase().includes(query.toLowerCase())
+    );
+    
+    setFilteredTools(filtered);
+    setShowResults(true);
+    setSelectedTool(null);
+    setQty(1);
+    setError('');
+    setSuccess('');
+  };
+
+  const handleSearchKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
+
 
   const handleRequest = async (e) => {
     e.preventDefault();
@@ -211,75 +244,106 @@ export default function OperatorDashboard() {
         {success && <div className="success-message">{success}</div>}
         {error && <div className="error-message">{error}</div>}
         
-        <form onSubmit={handleRequest} className="request-form">
-          <div className="table-wrapper glass">
-            <table className="styled-table glass">
-              <thead>
-                <tr>
-                  <th>Sl no</th>
-                  <th>ID</th>
-                  <th>Tool Name</th>
-                  <th>Range (mm)</th>
-                  <th>Identification Code</th>
-                  <th>Make</th>
-                  <th>Location</th>
-                  <th>Gauge</th>
-                  <th>Remarks</th>
-                  <th>Added At</th>
-                  <th>Select</th>
-                  <th>Request Quantity</th>
-                </tr>
-              </thead>
-              <tbody>
-                {tools.length === 0 ? (
-                  <tr><td colSpan={12} className="no-tools">No tools available</td></tr>
-                ) : (
-                  tools.map((tool, idx) => (
-                    <tr key={tool.id}>
-                      <td>{idx + 1}</td>
-                      <td>{tool.id}</td>
-                      <td>{tool.tool_name || '-'}</td>
-                      <td>{tool.range_mm || '-'}</td>
-                      <td>{tool.identification_code || '-'}</td>
-                      <td>{tool.make || '-'}</td>
-                      <td>{tool.location || '-'}</td>
-                      <td>{tool.gauge || '-'}</td>
-                      <td>{tool.remarks || '-'}</td>
-                      <td>{tool.added_at ? new Date(tool.added_at).toLocaleString() : '-'}</td>
-                      <td>
-                        <input
-                          type="radio"
-                          name="tool"
-                          value={tool.id}
-                          checked={selectedTool === tool.id}
-                          onChange={() => setSelectedTool(tool.id)}
-                          className="tool-radio"
-                        />
-                      </td>
-                      <td>
-                        {selectedTool === tool.id ? (
-                          <div className="quantity-input-wrapper">
-                            <input
-                              type="number"
-                              min="1"
-                              max={tool.quantity ?? 0}
-                              value={qty}
-                              onChange={e => setQty(Number(e.target.value))}
-                              className="quantity-input"
-                              placeholder="Qty"
-                            />
-                            <span className="max-quantity">Max: {tool.quantity ?? 0}</span>
-                          </div>
-                        ) : (
-                          <span className="select-tool-hint">Select tool first</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+        {/* Search Section */}
+        <div className="search-section glass">
+          <h3>Search for Tools</h3>
+          <div className="search-container-vertical">
+            <div className="search-input-wrapper">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyPress={handleSearchKeyPress}
+                placeholder="Start typing to search for tools..."
+                className="search-input-extra-large"
+                autoComplete="off"
+              />
+            </div>
+            
+            <button 
+              type="button" 
+              onClick={handleSearch}
+              className="search-btn-small"
+            >
+              🔍 Search
+            </button>
           </div>
+        </div>
+
+        {/* Results Section - Only show when search has been performed */}
+        {showResults && (
+          <form onSubmit={handleRequest} className="request-form">
+            <div className="search-results-section">
+              <h3>Search Results ({filteredTools.length} tools found)</h3>
+              <div className="table-wrapper glass">
+                <table className="styled-table glass">
+                  <thead>
+                    <tr>
+                      <th>Sl no</th>
+                      <th>ID</th>
+                      <th>Tool Name</th>
+                      <th>Range (mm)</th>
+                      <th>Identification Code</th>
+                      <th>Make</th>
+                      <th>Location</th>
+                      <th>Gauge</th>
+                      <th>Remarks</th>
+                      <th>Added At</th>
+                      <th>Select</th>
+                      <th>Request Quantity</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredTools.length === 0 ? (
+                      <tr><td colSpan={12} className="no-tools">No tools found matching your search</td></tr>
+                    ) : (
+                      filteredTools.map((tool, idx) => (
+                        <tr key={tool.id}>
+                          <td>{idx + 1}</td>
+                          <td>{tool.id}</td>
+                          <td>{tool.tool_name || '-'}</td>
+                          <td>{tool.range_mm || '-'}</td>
+                          <td>{tool.identification_code || '-'}</td>
+                          <td>{tool.make || '-'}</td>
+                          <td>{tool.location || '-'}</td>
+                          <td>{tool.gauge || '-'}</td>
+                          <td>{tool.remarks || '-'}</td>
+                          <td>{tool.added_at ? new Date(tool.added_at).toLocaleString() : '-'}</td>
+                          <td>
+                            <input
+                              type="radio"
+                              name="tool"
+                              value={tool.id}
+                              checked={selectedTool === tool.id}
+                              onChange={() => setSelectedTool(tool.id)}
+                              className="tool-radio"
+                            />
+                          </td>
+                          <td>
+                            {selectedTool === tool.id ? (
+                              <div className="quantity-input-wrapper">
+                                <input
+                                  type="number"
+                                  min="1"
+                                  max={tool.quantity ?? 0}
+                                  value={qty}
+                                  onChange={e => setQty(Number(e.target.value))}
+                                  className="quantity-input"
+                                  placeholder="Qty"
+                                />
+                                <span className="max-quantity">Max: {tool.quantity ?? 0}</span>
+                              </div>
+                            ) : (
+                              <span className="select-tool-hint">Select tool first</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           
           <div className="form-actions">
             <button type="submit" className="request-submit-btn">
@@ -293,7 +357,8 @@ export default function OperatorDashboard() {
               Report Issue
             </button>
           </div>
-        </form>
+          </form>
+        )}
       </div>
 
       {/* Floating decorative shapes */}
