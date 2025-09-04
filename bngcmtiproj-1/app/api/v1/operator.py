@@ -148,7 +148,7 @@ def get_operator_tool_issues(db: OrmSession = Depends(get_db), session_data: tup
         select(ToolIssue, ToolInventory.tool_name)
         .join(ToolInventory, ToolIssue.tool_id == ToolInventory.id)
         .where(ToolIssue.operator_id == operator_id)
-        .order_by(ToolIssue.reported_at.desc())
+        .order_by(ToolIssue.created_at.desc())
     ).all()
     
     return [
@@ -158,9 +158,8 @@ def get_operator_tool_issues(db: OrmSession = Depends(get_db), session_data: tup
             "tool_name": tool_name,
             "description": issue.description,
             "status": issue.status,
-            "reported_at": str(issue.reported_at),
-            "response": issue.response,
-            "response_at": str(issue.response_at) if issue.response_at else None
+            "reported_at": str(issue.created_at),
+            "resolved_at": str(issue.resolved_at) if issue.resolved_at else None
         } for issue, tool_name in issues
     ]
 

@@ -452,9 +452,99 @@
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
+/* Tool Issues Section */
+.tool-issues-section {
+  margin-top: 30px;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 16px;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(15px);
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.section-header h2 {
+  color: #2d3748;
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.fetch-issues-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.fetch-issues-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+}
+
+.issues-results-section {
+  margin-top: 20px;
+}
+
+.issues-results-section h3 {
+  color: #2d3748;
+  margin-bottom: 15px;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.description-cell {
+  max-width: 200px;
+  word-wrap: break-word;
+  white-space: normal;
+}
+
+.status-badge {
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.status-open {
+  background-color: #fed7d7;
+  color: #c53030;
+}
+
+.status-resolved {
+  background-color: #c6f6d5;
+  color: #2f855a;
+}
+
+.status-closed {
+  background-color: #e2e8f0;
+  color: #4a5568;
+}
+
+.no-issues {
+  text-align: center;
+  color: #718096;
+  font-style: italic;
+  padding: 20px;
+}
+
 /* Floating decorative shapes */
 .dashboard-decoration {
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
   width: 100%;

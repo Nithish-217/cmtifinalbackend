@@ -84,8 +84,8 @@ export default function OfficerInventoryPage() {
       {loading && <div>Loading...</div>}
       {error && <div style={{ color: 'red' }}>{error}</div>}
       {!loading && !error && (
-        <div className="table-wrapper">
-          <table className="styled-table">
+        <div className="tools-table-container">
+          <table className="tools-table">
             <thead>
               <tr>
                 <th>ID</th>

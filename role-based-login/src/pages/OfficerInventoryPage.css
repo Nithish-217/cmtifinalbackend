@@ -65,29 +65,29 @@
 }
 
 .tools-table-container {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
+  background: #ffffff;
   border-radius: 15px;
-  padding: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 0;
+  border: 1px solid #e2e8f0;
   overflow-x: auto;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .tools-table {
   width: 100%;
   border-collapse: collapse;
-  background: transparent;
+  background: #ffffff;
 }
 
 .tools-table th,
 .tools-table td {
   padding: 12px 15px;
   text-align: left;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid #e2e8f0;
 }
 
 .tools-table th {
-  background: rgba(255, 255, 255, 0.1);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   font-weight: 600;
   color: #ffffff;
   text-transform: uppercase;
@@ -96,11 +96,11 @@
 }
 
 .tools-table td {
-  color: #e5e7eb;
+  color: #000000;
 }
 
-.tools-table tr:hover {
-  background: rgba(255, 255, 255, 0.05);
+.tools-table tbody tr:hover {
+  background: #f8fafc;
 }
 
 .quantity-cell {

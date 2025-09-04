@@ -44,29 +44,27 @@
 }
 
 .issues-table-container {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
+  background: #ffffff;
   border-radius: 15px;
-  padding: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 0;
+  border: 1px solid #e2e8f0;
   overflow-x: auto;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .issues-table {
   width: 100%;
   border-collapse: collapse;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
+  background: #ffffff;
   border-radius: 15px;
   overflow: hidden;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
 }
 
 .issues-table th,
 .issues-table td {
   padding: 15px;
   text-align: left;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  border-bottom: 1px solid #e2e8f0;
 }
 
 .issues-table th {
@@ -84,8 +82,8 @@
   font-weight: 500;
 }
 
-.issues-table tr:hover {
-  background: rgba(0, 0, 0, 0.05);
+.issues-table tbody tr:hover {
+  background: #f8fafc;
 }
 
 .status-badge {

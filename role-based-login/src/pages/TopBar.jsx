@@ -60,24 +60,9 @@ export default function TopBar({ onLogout }) {
   const handleLogout = async () => {
     try {
       const sessionId = localStorage.getItem('session_id');
-      const userRole = localStorage.getItem('user_role');
       
       if (sessionId) {
-        // Release role lock before logout
-        if (userRole === 'SUPERVISOR' || userRole === 'OFFICER') {
-          try {
-            await fetch('http://localhost:8000/api/auth/release-role-lock', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'x-session-id': sessionId
-              }
-            });
-          } catch (lockErr) {
-            console.error('Failed to release role lock:', lockErr);
-          }
-        }
-        
+        // Only call logout endpoint - it will handle lock release internally
         await fetch('http://localhost:8000/api/auth/logout', {
           method: 'POST',
           headers: {

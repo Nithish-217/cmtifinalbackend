@@ -102,28 +102,39 @@ def session_check(x_session_id: str | None = None, db: OrmSession = Depends(get_
     return SessionCheckOut(valid=True, username=user.username, role=user.role.value, expires_at=sess.expires_at)
 
 @router.post("/logout", response_model=MessageOut)
-def logout(x_session_id: str | None = None, db: OrmSession = Depends(get_db)):
+def logout(request: Request, db: OrmSession = Depends(get_db)):
+    x_session_id = request.headers.get("x-session-id")
+    print(f"=== LOGOUT DEBUG START ===")
     print(f"/logout called with x_session_id={x_session_id}")
     if not x_session_id:
         print("No session_id provided to logout.")
         return MessageOut(message="Logged out")
+    
     sess = db.execute(select(SessionModel).where(SessionModel.session_id == x_session_id)).scalar_one_or_none()
     if not sess or sess.logout_at is not None:
         print("Session not found or already logged out.")
         return MessageOut(message="Logged out")
-    print(f"Logging out session: {sess.session_id}, role: {sess.role}")
+    
+    print(f"Found session: {sess.session_id}, role: {sess.role}, user_id: {sess.user_id}")
+    
+    # Release role lock FIRST, before any other changes
+    if sess.role in (UserRole.OFFICER, UserRole.SUPERVISOR):
+        print(f"Attempting to release lock for role {sess.role} and session {sess.session_id}")
+        release_lock_if_owner(db, sess.role, sess)
+    
+    # Now update session and user
     sess.logout_at = _now()
     sess.ended_reason = SessionEndReason.LOGOUT
+    
     user = db.get(User, sess.user_id)
     if user:
         print(f"Before logout: is_active={user.is_active} for user {user.username} (id={user.id})")
         user.is_active = False
-        db.commit()
-        db.refresh(user)
         print(f"After logout: is_active={user.is_active} for user {user.username} (id={user.id})")
-    if sess.role in (UserRole.OFFICER, UserRole.SUPERVISOR):
-        print(f"Releasing lock for role {sess.role} and session {sess.session_id}")
-        release_lock_if_owner(db, sess.role, sess)
+    
+    # Commit all changes
+    db.commit()
+    print(f"=== LOGOUT DEBUG END ===")
     return MessageOut(message="Logged out")
 
 @router.post("/release-role-lock", response_model=MessageOut)

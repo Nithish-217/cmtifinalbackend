@@ -18,6 +18,8 @@ export default function OperatorDashboard() {
     totalRequests: 0,
     totalIssues: 0
   });
+  const [toolIssues, setToolIssues] = useState([]);
+  const [showToolIssues, setShowToolIssues] = useState(false);
 
   useEffect(() => {
     const sessionId = localStorage.getItem('session_id');
@@ -174,6 +176,27 @@ export default function OperatorDashboard() {
     } catch (err) {
       setError('Failed to submit request.');
       window.alert('Failed to submit request.');
+    };
+  };
+
+  const fetchToolIssues = async () => {
+    try {
+      const sessionId = localStorage.getItem('session_id');
+      const res = await fetch('http://localhost:8000/api/v1/operator/tool-issues', {
+        headers: {
+          'Content-Type': 'application/json',
+          ...(sessionId ? { 'x-session-id': sessionId } : {})
+        }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setToolIssues(data);
+        setShowToolIssues(true);
+      } else {
+        setError('Failed to fetch tool issues.');
+      }
+    } catch (err) {
+      setError('Failed to fetch tool issues.');
     }
   };
 
@@ -358,6 +381,60 @@ export default function OperatorDashboard() {
             </button>
           </div>
           </form>
+        )}
+      </div>
+
+      {/* Tool Issues Report Section */}
+      <div className="tool-issues-section">
+        <div className="section-header">
+          <h2>Tool Issues Report</h2>
+          <button 
+            type="button" 
+            onClick={fetchToolIssues}
+            className="fetch-issues-btn"
+          >
+            📊 View Tool Issues
+          </button>
+        </div>
+
+        {showToolIssues && (
+          <div className="issues-results-section">
+            <h3>Tool Issues ({toolIssues.length} issues found)</h3>
+            <div className="table-wrapper glass">
+              <table className="styled-table glass">
+                <thead>
+                  <tr>
+                    <th>Issue ID</th>
+                    <th>Tool Name</th>
+                    <th>Description</th>
+                    <th>Status</th>
+                    <th>Reported At</th>
+                    <th>Resolved At</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {toolIssues.length === 0 ? (
+                    <tr><td colSpan={6} className="no-issues">No tool issues found</td></tr>
+                  ) : (
+                    toolIssues.map((issue) => (
+                      <tr key={issue.issue_id}>
+                        <td>{issue.issue_id}</td>
+                        <td>{issue.tool_name || '-'}</td>
+                        <td className="description-cell">{issue.description || '-'}</td>
+                        <td>
+                          <span className={`status-badge status-${issue.status.toLowerCase()}`}>
+                            {issue.status}
+                          </span>
+                        </td>
+                        <td>{issue.reported_at ? new Date(issue.reported_at).toLocaleString() : '-'}</td>
+                        <td>{issue.resolved_at ? new Date(issue.resolved_at).toLocaleString() : 'Not resolved'}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         )}
       </div>
 
